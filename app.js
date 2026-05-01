@@ -1055,15 +1055,19 @@ if ('speechSynthesis' in window) {
 
 function getSelectedVoice() {
     const voices = window.speechSynthesis.getVoices();
-    const usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+    let usVoices = voices.filter(v => (v.lang === 'en-US' || v.lang === 'en_US') && v.localService === true);
+    
+    // ローカル音声が見つからない場合のフォールバック
+    if (usVoices.length === 0) {
+        usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+    }
+    
     if (usVoices.length === 0) return null;
 
     const val = document.getElementById('voice-select')?.value || 'random';
     if (val === 'random') {
-        let localVoices = usVoices.filter(v => v.localService === true);
-        if (localVoices.length === 0) localVoices = usVoices;
-        const randomIndex = Math.floor(Math.random() * localVoices.length);
-        return localVoices[randomIndex];
+        const randomIndex = Math.floor(Math.random() * usVoices.length);
+        return usVoices[randomIndex];
     }
     return usVoices.find(v => v.name === val) || usVoices[0];
 }
@@ -1076,16 +1080,21 @@ function initVoiceList() {
     const savedVoiceName = localStorage.getItem('selected_us_voice') || 'random';
 
     const voices = window.speechSynthesis.getVoices();
-    // en-US 系の声を抽出
-    const usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+    // en-US 系でローカル音声のみを優先抽出
+    let usVoices = voices.filter(v => (v.lang === 'en-US' || v.lang === 'en_US') && v.localService === true);
+
+    // もしローカル音声が一つもない場合はオンライン音声も含める
+    if (usVoices.length === 0) {
+        usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+    }
 
     // ドロップダウンを初期化（ランダムを一番上に）
-    voiceSelect.innerHTML = '<option value="random">ランダム（アメリカ英語）</option>';
+    voiceSelect.innerHTML = '<option value="random">ランダム（安定したローカル音声）</option>';
 
     usVoices.forEach(voice => {
         const option = document.createElement('option');
         option.value = voice.name;
-        option.textContent = voice.name;
+        option.textContent = voice.name + (voice.localService ? '' : ' (オンライン)');
         if (voice.name === savedVoiceName) {
             option.selected = true;
         }
