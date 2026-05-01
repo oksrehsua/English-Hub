@@ -9,6 +9,31 @@ let isDictationMode = false;
 let loadedFileName = '';
 let activePlayback = { type: null, rate: null, btn: null, timeoutId: null, currentCount: 0, text: '', autoNext: false, onRepeat: null };
 
+let globalAudioCtx = null;
+let isAudioUnlocked = false;
+
+function initGlobalAudio() {
+    if (!isAudioUnlocked) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+            try {
+                globalAudioCtx = new AudioContext();
+            } catch (e) {
+                console.error("AudioContext creation failed", e);
+            }
+        }
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance('');
+            utterance.volume = 0;
+            window.speechSynthesis.speak(utterance);
+        }
+        isAudioUnlocked = true;
+    }
+    if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+        globalAudioCtx.resume().catch(() => {});
+    }
+}
+
 const appAreaOriginalHTML = `
     <div id="progress"></div>
     <div class="badge-container" style="margin-bottom: 12px;">
@@ -164,7 +189,7 @@ function updateFilters() {
 
     const levelSelect = document.getElementById('level-select');
     if (levelSelect) {
-        levelSelect.innerHTML = '<option value="all">すべてのレベル（CSVから取得）</option>';
+        levelSelect.innerHTML = '<option value="all">すべてのレベル</option>';
         const sortedLevels = Array.from(levelSet).sort((a, b) => {
             const numA = Number(a);
             const numB = Number(b);
@@ -180,7 +205,7 @@ function updateFilters() {
 
     const formatSelect = document.getElementById('format-select');
     if (formatSelect) {
-        formatSelect.innerHTML = '<option value="all">すべての形式（CSVから取得）</option>';
+        formatSelect.innerHTML = '<option value="all">すべての形式</option>';
         const sortedFormats = Array.from(formatSet).sort();
         sortedFormats.forEach(fmt => {
             const option = document.createElement('option');
@@ -216,6 +241,7 @@ function updateFilters() {
 }
 
 function startReviewMode() {
+    initGlobalAudio();
     if (mistakes.length === 0) return;
     isReviewMode = true;
     currentQuestions = [...mistakes];
@@ -308,6 +334,7 @@ function shuffleArray(array) {
 }
 
 function startQuiz() {
+    initGlobalAudio();
     const errorMsg = document.getElementById('setup-error');
     const selectedLevel = document.getElementById('level-select').value;
     const selectedFormat = document.getElementById('format-select').value;
@@ -399,7 +426,7 @@ function displayQuestion() {
         qTextEl.textContent = 'Listen and Write!';
         qTextEl.style.color = 'var(--primary)';
         qTextEl.style.fontSize = '1.2rem';
-        
+
         const input = document.createElement('input');
         input.type = 'text';
         input.id = 'text-answer';
@@ -407,13 +434,13 @@ function displayQuestion() {
         input.placeholder = '聞こえた英文をタイピング...';
         input.autocomplete = 'off';
         inputArea.appendChild(input);
-        
+
         const englishText = getEnglishText(q);
         const playBtnsHtml = getPlayButtonsHtml(englishText);
         const playBtnsDiv = document.createElement('div');
         playBtnsDiv.innerHTML = playBtnsHtml;
         inputArea.appendChild(playBtnsDiv);
-        
+
         setTimeout(() => {
             playAudio(englishText);
         }, 500);
@@ -421,7 +448,7 @@ function displayQuestion() {
     } else if (isListeningMode) {
         // 再生モード：問題文（空欄あり）を表示し、その下に即座に解答を表示する
         qTextEl.textContent = q.text;
-        
+
         const englishText = getEnglishText(q);
         const answerSentenceHtml = getAnswerSentenceHtml(q);
         const repeatCount = parseInt(document.getElementById('step-count-input')?.value || 3);
@@ -429,24 +456,24 @@ function displayQuestion() {
         // 解答エリアを最初は非表示にする (最後の回で表示)
         const resultMsg = document.getElementById('result-message');
         resultMsg.innerHTML = `<div id="listening-answer" class="result-sentence" style="display: none;">Answer: ${answerSentenceHtml}</div>`;
-        
+
         // 一時停止ボタンを追加
         const stopBtnHtml = `
             <div style="margin-bottom: 20px; text-align: right;">
                 <button id="pause-resume-btn" onclick="togglePauseResume()" class="secondary-btn" style="padding: 10px 20px; font-size: 0.9rem; background: var(--accent);">一時停止</button>
             </div>
         `;
-        
+
         // 解説エリアを表示（再生ボタンのみ、和訳なし）
         const playBtnsHtml = getPlayButtonsHtml(englishText);
         const expArea = document.getElementById('explanation-area');
         expArea.innerHTML = `${stopBtnHtml}<strong style="font-size: 1.1em; color: #e95c8b;">Listening:</strong>${playBtnsHtml}`;
         expArea.style.display = 'block';
-        
+
         checkBtn.style.display = 'none';
         document.getElementById('next-btn').style.display = 'inline-block';
         inputArea.style.display = 'none';
-        
+
         // 音声を自動再生
         setTimeout(() => {
             playAudio(englishText, 1.0, repeatCount, null, true, (current, total) => {
@@ -457,7 +484,7 @@ function displayQuestion() {
                 }
             });
         }, 500);
-        
+
     } else if (q.format === '選択問題') {
         qTextEl.textContent = q.text;
         const match = q.text.match(/\(\s*(.*?)\s*\)/);
@@ -594,6 +621,7 @@ function getAcceptedAnswers(q, blankCount) {
 }
 
 function checkAnswer() {
+    initGlobalAudio();
     const q = currentQuestions[currentIndex];
     let userAnswer = '';
 
@@ -619,7 +647,7 @@ function checkAnswer() {
     const englishText = getEnglishText(q);
     const blankCount = (q.text.match(/\(\s*\)/g) || []).length;
     const acceptedAnswers = getAcceptedAnswers(q, blankCount);
-    
+
     let isCorrect = false;
     if (isDictationMode) {
         isCorrect = (cleanUser === sanitize(englishText));
@@ -649,7 +677,7 @@ function checkAnswer() {
         expArea.style.display = 'block';
         document.getElementById('check-btn').style.display = 'none';
         document.getElementById('next-btn').style.display = 'inline-block';
-        
+
         const autoPlayEnabled = document.getElementById('auto-play-toggle')?.checked ?? true;
         if (autoPlayEnabled) {
             playAudio(englishText);
@@ -723,6 +751,7 @@ function getRankData(accuracy) {
 
 function nextQuestion() {
     stopAnyAudio();
+    initGlobalAudio();
     const q = currentQuestions[currentIndex];
     if (q.format === '日本語訳') {
         const laterCheck = document.getElementById('later-check');
@@ -788,41 +817,46 @@ document.addEventListener('keydown', function (event) {
 });
 
 function playCountdown(callback) {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) {
+    if (!globalAudioCtx) {
         callback();
         return;
     }
 
-    const audioCtx = new AudioContext();
+    if (globalAudioCtx.state === 'suspended') {
+        globalAudioCtx.resume().catch(() => {});
+    }
+
     const bpm = 120;
     const interval = 60 / bpm; // 0.5秒
 
     function beep(time, freq = 880) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        try {
+            const osc = globalAudioCtx.createOscillator();
+            const gain = globalAudioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(globalAudioCtx.destination);
 
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, time);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, time);
 
-        gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(0.4, time + 0.01); // 音量をアップ
-        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.4, time + 0.01); // 音量をアップ
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
 
-        osc.start(time);
-        osc.stop(time + 0.1);
+            osc.start(time);
+            osc.stop(time + 0.1);
+        } catch (e) {
+            console.error('Beep error:', e);
+        }
     }
 
-    const now = audioCtx.currentTime;
+    const now = globalAudioCtx.currentTime;
     beep(now);
     beep(now + interval);
     beep(now + interval * 2);
 
     // 3回目の音の後に少し間を置いてから開始
     activePlayback.timeoutId = setTimeout(() => {
-        audioCtx.close();
         callback();
     }, (interval * 3) * 1000);
 }
@@ -845,6 +879,7 @@ function stopAnyAudio() {
 }
 
 function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false, onRepeat = null, startFrom = 0) {
+    initGlobalAudio();
     if (!('speechSynthesis' in window)) {
         alert('お使いのブラウザは音声読み上げに対応していません。');
         return;
@@ -863,7 +898,7 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
     activePlayback.autoNext = autoNext;
     activePlayback.onRepeat = onRepeat;
     activePlayback.type = 'normal';
-    
+
     if (btnElem) {
         activePlayback.btn = btnElem;
         activePlayback.btn.classList.add('is-playing');
@@ -882,6 +917,7 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
 
         playCountdown(() => {
             const utterance = new SpeechSynthesisUtterance(text);
+            window.__currentUtterance = utterance; // Prevent GC
             utterance.lang = 'en-US';
             utterance.rate = rate;
             const selectedVoice = getSelectedVoice();
@@ -900,6 +936,12 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
                     }
                 }
             };
+            
+            utterance.onerror = (e) => {
+                console.error('SpeechSynthesis error:', e);
+                stopAnyAudio();
+            };
+
             window.speechSynthesis.speak(utterance);
         });
     }
@@ -917,7 +959,7 @@ function togglePauseResume() {
         isPaused = true;
         btn.textContent = '再生を再開';
         btn.style.background = 'var(--success)';
-        
+
         // 音声を即座に停止
         window.speechSynthesis.cancel();
         if (activePlayback.timeoutId) {
@@ -929,22 +971,23 @@ function togglePauseResume() {
         isPaused = false;
         btn.textContent = '一時停止';
         btn.style.background = 'var(--accent)';
-        
+
         // 現在のカウントから再開
         const repeatCount = parseInt(document.getElementById('step-count-input')?.value || 3);
         playAudio(
-            activePlayback.text, 
-            activePlayback.rate, 
-            repeatCount, 
-            activePlayback.btn, 
-            activePlayback.autoNext, 
-            activePlayback.onRepeat, 
+            activePlayback.text,
+            activePlayback.rate,
+            repeatCount,
+            activePlayback.btn,
+            activePlayback.autoNext,
+            activePlayback.onRepeat,
             activePlayback.currentCount
         );
     }
 }
 
 function playAudioStep(text, btnElem = null) {
+    initGlobalAudio();
     if (!('speechSynthesis' in window)) {
         alert('お使いのブラウザは音声読み上げに対応していません。');
         return;
@@ -972,6 +1015,7 @@ function playAudioStep(text, btnElem = null) {
     function speakNext() {
         playCountdown(() => {
             const utterance = new SpeechSynthesisUtterance(text);
+            window.__currentUtterance = utterance; // Prevent GC
             utterance.lang = 'en-US';
             utterance.rate = rates[rateIdx];
             const selectedVoice = getSelectedVoice();
@@ -991,6 +1035,12 @@ function playAudioStep(text, btnElem = null) {
                     activePlayback.timeoutId = setTimeout(speakNext, 600);
                 }
             };
+            
+            utterance.onerror = (e) => {
+                console.error('SpeechSynthesis error:', e);
+                stopAnyAudio();
+            };
+
             window.speechSynthesis.speak(utterance);
         });
     }
@@ -1023,7 +1073,7 @@ function initVoiceList() {
 
     // 現在の選択を保存
     const savedVoiceName = localStorage.getItem('selected_us_voice') || 'random';
-    
+
     const voices = window.speechSynthesis.getVoices();
     // en-US 系の声を抽出
     const usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
