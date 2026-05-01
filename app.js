@@ -22,11 +22,6 @@ function initGlobalAudio() {
                 console.error("AudioContext creation failed", e);
             }
         }
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance('');
-            utterance.volume = 0;
-            window.speechSynthesis.speak(utterance);
-        }
         isAudioUnlocked = true;
     }
     if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
@@ -862,7 +857,11 @@ function playCountdown(callback) {
 }
 
 function stopAnyAudio() {
-    window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window) {
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+            window.speechSynthesis.cancel();
+        }
+    }
     if (activePlayback.timeoutId) {
         clearTimeout(activePlayback.timeoutId);
         activePlayback.timeoutId = null;
@@ -1061,8 +1060,10 @@ function getSelectedVoice() {
 
     const val = document.getElementById('voice-select')?.value || 'random';
     if (val === 'random') {
-        const randomIndex = Math.floor(Math.random() * usVoices.length);
-        return usVoices[randomIndex];
+        let localVoices = usVoices.filter(v => v.localService === true);
+        if (localVoices.length === 0) localVoices = usVoices;
+        const randomIndex = Math.floor(Math.random() * localVoices.length);
+        return localVoices[randomIndex];
     }
     return usVoices.find(v => v.name === val) || usVoices[0];
 }
