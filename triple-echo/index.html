@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIPLE ECHO - English Training</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="title-container">
+        <h1>TRIPLE ECHO</h1>
+        <div class="subtitle">ADVANCED REPETITION SYSTEM</div>
+        <div style="margin-top: 20px;">
+            <a href="../index.html" class="nav-link-btn">
+                <span>🏠 HOME に戻る</span>
+            </a>
+        </div>
+    </div>
+
+    <div id="setup-area" class="container">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <div style="flex: 1; min-width: 200px;">
+                <p>1a. 「問題csv」ファイルを選択:</p>
+                <input type="file" id="csv-file" accept=".csv">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <p>1b. または「フォルダ」を一括選択:</p>
+                <input type="file" id="directory-input" webkitdirectory directory multiple>
+            </div>
+        </div>
+
+        <div id="loading-status" style="display: none; margin-top: 10px; font-weight: 900; color: var(--primary);">
+        </div>
+        <div id="loaded-file-indicator" style="display: none;"></div>
+
+        <p style="margin-top: 15px;">2. 難易度レベルを選択してください:</p>
+        <select id="level-select">
+            <option value="all">すべてのレベル</option>
+        </select>
+
+        <p style="margin-top: 15px;">3. 出題形式を選択してください:</p>
+        <select id="format-select">
+            <option value="all">すべての形式</option>
+        </select>
+
+        <p style="margin-top: 15px;">4. 単元を選択してください:</p>
+        <select id="unit-category-select">
+            <option value="all">すべての単元</option>
+        </select>
+
+        <p style="margin-top: 15px;">5. 出題数を入力してください（空欄で全て出題）:</p>
+        <input type="number" id="count-input" value="10" min="1" placeholder="例: 10" style="max-width: 150px;">
+
+        <p style="margin-top: 15px;">6. 絞り込みタグを選択してください:</p>
+        <select id="tag-select">
+            <option value="">すべてのタグ</option>
+        </select>
+
+        <p style="margin-top: 15px;">7. スピード訓練のリピート回数:</p>
+        <input type="number" id="step-count-input" value="3" min="1" max="10" style="max-width: 150px;">
+
+        <p style="margin-top: 15px;">8. 解答後の自動音声再生:</p>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fff; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+            <input type="checkbox" id="auto-play-toggle" checked style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--primary);">
+            <label for="auto-play-toggle" style="font-weight: 900; cursor: pointer; color: #1a1a1a;">ON（解答時に自動で読み上げる）</label>
+        </div>
+
+        <p style="margin-top: 15px;">9. 再生モード（リピート再生・和訳なし）:</p>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fffceb; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+            <input type="checkbox" id="listening-mode-toggle" style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--secondary);">
+            <label for="listening-mode-toggle" style="font-weight: 900; cursor: pointer; color: #1a1a1a;">再生モード（聞き流し用に自動で進む）</label>
+        </div>
+
+        <p style="margin-top: 15px;">10. ディクテーション・モード（書き起こし）:</p>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f1f2f6; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+            <input type="checkbox" id="dictation-mode-toggle" style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--danger);">
+            <label for="dictation-mode-toggle" style="font-weight: 900; cursor: pointer; color: #1a1a1a;">ディクテーション・モード（英文を隠してタイピング）</label>
+        </div>
+
+
+        <p style="margin-top: 15px;">11. 音声の種類（アメリカ英語）を選択:</p>
+        <div style="padding: 12px; background: #ebf5ff; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+            <select id="voice-select" style="margin-bottom: 0; min-width: 250px;">
+                <option value="random">ランダム（アメリカ英語）</option>
+            </select>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button id="start-btn" onclick="startQuiz()">出題開始</button>
+        </div>
+        <div id="setup-error" class="error-msg" style="display: none;"></div>
+
+        <div id="review-area"
+            style="margin-top: 40px; display: none; padding-top: 20px; border-top: 2px dashed var(--border);">
+            <p style="color: var(--primary); font-weight: 900; margin-bottom: 10px;">復習モード（前回まちがえた問題）</p>
+            <button id="review-btn" onclick="startReviewMode()" class="secondary-btn"
+                style="background-color: var(--primary); color: #fff;">間違えた問題に再挑戦する</button>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="reset-mistakes-btn" onclick="resetMistakes()" class="secondary-btn"
+                    style="font-size: 0.9rem;">間違えた記録をリセット</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-area" class="container" style="display: none;">
+        <div id="progress" style="margin-bottom: 10px; color: #666;"></div>
+        <span id="item-id-badge" class="badge item-id-badge"></span>
+        <span id="format-badge" class="badge format-badge"></span>
+        <span id="level-badge" class="badge level-badge"></span>
+        <span id="unit-category-badge" class="badge unit-category-badge" style="display: none;"></span>
+
+        <h3 id="question-text" style="margin-top: 10px;"></h3>
+        <div id="input-area"></div>
+
+        <button id="check-btn" onclick="checkAnswer()">解答する</button>
+
+        <div id="result-message" class="result-message"></div>
+        <div id="explanation-area" class="explanation"></div>
+
+        <button id="next-btn" onclick="nextQuestion()" style="display: none;">次の問題へ</button>
+
+        <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px;">
+            <button onclick="resetToSetup()" class="secondary-btn">ファイル選択に戻る</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>"></script>
+</body>
+
+</html>

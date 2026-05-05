@@ -81,6 +81,33 @@ h1 {
     box-shadow: 2px 2px 0 var(--border);
 }
 
+.nav-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background-color: var(--secondary);
+    color: white;
+    text-decoration: none;
+    font-weight: 900;
+    border: 2px solid var(--border);
+    border-radius: 50px;
+    box-shadow: 4px 4px 0 var(--border);
+    transition: all 0.1s;
+    font-size: 1rem;
+}
+
+.nav-link-btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 var(--border);
+    color: white;
+}
+
+.nav-link-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--border);
+}
+
 .container {
     max-width: 800px;
     margin: 0 auto 30px;
