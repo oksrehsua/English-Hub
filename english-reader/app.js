@@ -49,23 +49,31 @@ class EnglishReader {
     }
 
     loadVoices() {
+        const currentVoiceName = this.voiceSelect.value || (this.selectedVoice ? this.selectedVoice.name : null);
+
         // Filter for American English specifically
         this.voices = window.speechSynthesis.getVoices().filter(v => v.lang === 'en-US' || v.lang === 'en_US');
-        this.voiceSelect.innerHTML = '';
         
         if (this.voices.length === 0) {
             // Fallback: show any English if no US English is found
             this.voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
         }
 
+        this.voiceSelect.innerHTML = '';
         this.voices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
             option.textContent = `${voice.name} (${voice.lang})`;
+            if (voice.name === currentVoiceName) {
+                option.selected = true;
+            }
             this.voiceSelect.appendChild(option);
         });
         
-        if (this.voices.length > 0) {
+        // Restore or set default selected voice
+        if (currentVoiceName) {
+            this.selectedVoice = this.voices.find(v => v.name === currentVoiceName) || this.voices[0];
+        } else if (this.voices.length > 0) {
             this.selectedVoice = this.voices[0];
         }
     }
@@ -201,8 +209,13 @@ class EnglishReader {
         if (!window.speechSynthesis) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
-        if (this.selectedVoice) {
-            utterance.voice = this.selectedVoice;
+        
+        // Always get the latest selected voice from the list
+        const voiceName = this.voiceSelect.value;
+        const currentVoice = this.voices.find(v => v.name === voiceName) || this.selectedVoice;
+
+        if (currentVoice) {
+            utterance.voice = currentVoice;
         } else {
             utterance.lang = 'en-US';
         }
@@ -213,7 +226,14 @@ class EnglishReader {
             if (onEnd) onEnd();
         };
 
+        utterance.onerror = (e) => {
+            console.error('SpeechSynthesis error:', e);
+            this.currentUtterance = null;
+            if (onEnd) onEnd();
+        };
+
         this.currentUtterance = utterance;
+        window.__currentUtterance = utterance; // Prevent garbage collection
         window.speechSynthesis.speak(utterance);
     }
 
