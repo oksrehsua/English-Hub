@@ -62,27 +62,27 @@
         <input type="number" id="step-count-input" value="3" min="1" max="10" style="max-width: 150px;">
 
         <p style="margin-top: 15px;">8. 解答後の自動音声再生:</p>
-        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fff; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+        <div class="option-box" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fff; border: 2px solid #000; border-radius: 12px; box-shadow: 3px 3px 0 var(--border);">
             <input type="checkbox" id="auto-play-toggle" checked style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--primary);">
             <label for="auto-play-toggle" style="font-weight: 900; cursor: pointer; color: #1a1a1a;">ON（解答時に自動で読み上げる）</label>
         </div>
 
         <p style="margin-top: 15px;">9. 再生モード（リピート再生・和訳なし）:</p>
-        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fffceb; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+        <div class="option-box" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fffceb; border: 2px solid #000; border-radius: 12px; box-shadow: 3px 3px 0 var(--border);">
             <input type="checkbox" id="listening-mode-toggle" style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--secondary);">
             <label for="listening-mode-toggle" style="font-weight: 900; cursor: pointer; color: #1a1a1a;">再生モード（聞き流し用に自動で進む）</label>
         </div>
 
         <p style="margin-top: 15px;">10. ディクテーション・モード（書き起こし）:</p>
-        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f1f2f6; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
+        <div class="option-box" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f1f2f6; border: 2px solid #000; border-radius: 12px; box-shadow: 3px 3px 0 var(--border);">
             <input type="checkbox" id="dictation-mode-toggle" style="width: 24px; height: 24px; cursor: pointer; accent-color: var(--danger);">
             <label for="dictation-mode-toggle" style="font-weight: 900; cursor: pointer; color: #1a1a1a;">ディクテーション・モード（英文を隠してタイピング）</label>
         </div>
 
 
         <p style="margin-top: 15px;">11. 音声の種類（アメリカ英語）を選択:</p>
-        <div style="padding: 12px; background: #ebf5ff; border: 2px solid #000; border-radius: 12px; width: fit-content; box-shadow: 3px 3px 0 var(--border);">
-            <select id="voice-select" style="margin-bottom: 0; min-width: 250px;">
+        <div class="option-box" style="padding: 12px; background: #ebf5ff; border: 2px solid #000; border-radius: 12px; box-shadow: 3px 3px 0 var(--border);">
+            <select id="voice-select" style="margin-bottom: 0;">
                 <option value="random">ランダム（アメリカ英語）</option>
             </select>
         </div>

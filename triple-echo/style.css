@@ -450,10 +450,74 @@ button.is-playing {
     margin-top: 10px;
 }
 
+/* Option boxes (checkboxes, voice select wrappers) */
+.option-box {
+    width: fit-content;
+    max-width: 100%;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 600px) {
-    body { padding: 10px; }
-    .container { padding: 20px; }
+    body { padding: 10px; overflow-x: hidden; }
+    .container { padding: 16px; }
     h1 { font-size: 2.4rem; }
     button { width: 100%; margin-bottom: 12px; }
+
+    /* File inputs & selects must not overflow */
+    input[type="file"],
+    input[type="number"],
+    input[type="text"],
+    select {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        font-size: 1rem;
+    }
+
+    /* Option boxes go full width on mobile */
+    .option-box {
+        width: 100%;
+    }
+
+    .nav-link-btn {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+        margin-right: 4px;
+    }
+
+    .play-audio-btn {
+        width: auto;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+
+    .option-label {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+    }
+
+    .inline-input {
+        min-width: 60px;
+        font-size: 1rem;
+        padding: 4px 10px;
+    }
+
+    .explanation {
+        padding: 16px;
+        margin: 20px 0;
+    }
+
+    .result-card {
+        padding: 20px;
+    }
+
+    .start-over-btn {
+        font-size: 1.1rem;
+        padding: 16px 40px;
+    }
 }
