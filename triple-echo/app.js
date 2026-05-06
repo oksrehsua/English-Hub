@@ -1049,13 +1049,13 @@ function playAudioStep(text, btnElem = null) {
 
 if ('speechSynthesis' in window) {
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = initVoiceList;
+        window.speechSynthesis.addEventListener('voiceschanged', initVoiceList);
     }
 }
 
 function getSelectedVoice() {
     const voices = window.speechSynthesis.getVoices();
-    let usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+    let usVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
     
     if (usVoices.length === 0) return null;
 
@@ -1075,7 +1075,7 @@ function initVoiceList() {
     const savedVoiceName = localStorage.getItem('selected_us_voice') || 'random';
 
     const voices = window.speechSynthesis.getVoices();
-    let usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+    let usVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
 
     // ドロップダウンを初期化（ランダムを一番上に）
     voiceSelect.innerHTML = '<option value="random">ランダム</option>';
@@ -1098,7 +1098,9 @@ function initVoiceList() {
 
 // 読み込み時にも実行
 window.addEventListener('load', () => {
+    initVoiceList();
     setTimeout(initVoiceList, 100);
+    setTimeout(initVoiceList, 1000); // 遅延してロードされる音声用
 });
 
 
