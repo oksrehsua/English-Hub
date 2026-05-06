@@ -8,6 +8,7 @@ class EnglishReader {
         this.showTranslations = false;
         this.voices = [];
         this.selectedVoice = null;
+        this.playTimeout = null;
 
         // DOM Elements
         this.fileInput = document.getElementById('csv-upload');
@@ -231,11 +232,14 @@ class EnglishReader {
             return;
         }
 
-        this.highlightRow(this.currentIndex);
-        this.speak(this.csvData[this.currentIndex].english, () => {
-            if (this.isPlayingAll) {
+        const indexToPlay = this.currentIndex;
+        this.highlightRow(indexToPlay);
+        
+        this.speak(this.csvData[indexToPlay].english, () => {
+            // Only proceed if we are still playing and haven't jumped to another index
+            if (this.isPlayingAll && this.currentIndex === indexToPlay) {
                 this.currentIndex++;
-                setTimeout(() => this.playNext(), 500);
+                this.playTimeout = setTimeout(() => this.playNext(), 500);
             }
         });
     }
@@ -274,6 +278,10 @@ class EnglishReader {
 
     stopPlayback() {
         this.isPlayingAll = false;
+        if (this.playTimeout) {
+            clearTimeout(this.playTimeout);
+            this.playTimeout = null;
+        }
         window.speechSynthesis.cancel();
         this.currentUtterance = null;
         this.highlightRow(-1);
