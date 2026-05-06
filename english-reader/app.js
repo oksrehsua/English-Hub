@@ -61,6 +61,29 @@ class EnglishReader {
         // Filter for any English voices
         this.voices = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('en'));
 
+        this.voices.sort((a, b) => {
+            const getScore = (voice) => {
+                const name = voice.name.toLowerCase();
+                const lang = voice.lang.toLowerCase();
+                if (!lang.includes('us')) return 100;
+                if (name.includes('natural') || name.includes('online')) {
+                    if (name.includes('jenny')) return 1;
+                    if (name.includes('aria')) return 2;
+                    if (name.includes('guy')) return 3;
+                    if (name.includes('christopher')) return 4;
+                    if (name.includes('eric')) return 5;
+                    if (name.includes('michelle')) return 6;
+                    if (name.includes('roger')) return 7;
+                    if (name.includes('steffan')) return 8;
+                    return 10;
+                }
+                if (name.includes('google')) return 20;
+                if (name.includes('zira') || name.includes('david') || name.includes('mark')) return 30;
+                return 40;
+            };
+            return getScore(a) - getScore(b);
+        });
+
         this.voiceSelect.innerHTML = '';
         this.voices.forEach(voice => {
             const option = document.createElement('option');

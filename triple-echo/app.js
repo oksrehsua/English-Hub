@@ -1069,8 +1069,11 @@ function getSelectedVoice() {
 
     const val = document.getElementById('voice-select')?.value || 'random';
     if (val === 'random') {
-        const randomIndex = Math.floor(Math.random() * usVoices.length);
-        return usVoices[randomIndex];
+        let goodVoices = usVoices.filter(v => v.lang.toLowerCase().includes('us') && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online')));
+        if (goodVoices.length === 0) goodVoices = usVoices.filter(v => v.lang.toLowerCase().includes('us'));
+        if (goodVoices.length === 0) goodVoices = usVoices;
+        const randomIndex = Math.floor(Math.random() * goodVoices.length);
+        return goodVoices[randomIndex];
     }
     return usVoices.find(v => v.name === val) || usVoices[0];
 }
@@ -1084,6 +1087,29 @@ function initVoiceList() {
 
     const voices = window.speechSynthesis.getVoices();
     let usVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
+
+    usVoices.sort((a, b) => {
+        const getScore = (voice) => {
+            const name = voice.name.toLowerCase();
+            const lang = voice.lang.toLowerCase();
+            if (!lang.includes('us')) return 100;
+            if (name.includes('natural') || name.includes('online')) {
+                if (name.includes('jenny')) return 1;
+                if (name.includes('aria')) return 2;
+                if (name.includes('guy')) return 3;
+                if (name.includes('christopher')) return 4;
+                if (name.includes('eric')) return 5;
+                if (name.includes('michelle')) return 6;
+                if (name.includes('roger')) return 7;
+                if (name.includes('steffan')) return 8;
+                return 10;
+            }
+            if (name.includes('google')) return 20;
+            if (name.includes('zira') || name.includes('david') || name.includes('mark')) return 30;
+            return 40;
+        };
+        return getScore(a) - getScore(b);
+    });
 
     // ドロップダウンを初期化（ランダムを一番上に）
     voiceSelect.innerHTML = '<option value="random">ランダム</option>';
