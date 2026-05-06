@@ -1083,7 +1083,36 @@ function initVoiceList() {
     usVoices.forEach(voice => {
         const option = document.createElement('option');
         option.value = voice.name;
-        option.textContent = voice.name + (voice.localService ? ' (ローカル)' : ' (オンライン)');
+        
+        let chara = '';
+        const knownChars = {
+            'Microsoft David': '男性、少し低め',
+            'Microsoft Zira': '女性、標準的',
+            'Microsoft Mark': '男性、少し高め',
+            'Google US English': '女性、標準的',
+            'Google UK English Female': '女性、イギリス',
+            'Google UK English Male': '男性、イギリス',
+            'Aria': '女性、クリアで自然',
+            'Guy': '男性、落ち着いた・自然',
+            'Jenny': '女性、明るい・自然',
+            'Ana': '子供(女の子)',
+            'Christopher': '男性、自然',
+            'Eric': '男性、標準的',
+            'Michelle': '女性、少し低め',
+            'Roger': '男性、少し高め',
+            'Steffan': '男性、標準的'
+        };
+        for (const [key, value] of Object.entries(knownChars)) {
+            if (voice.name.includes(key)) {
+                chara = value;
+                break;
+            }
+        }
+        if (!chara) {
+            chara = voice.localService ? 'ローカル' : 'オンライン';
+        }
+
+        option.textContent = voice.name + ` (${chara})`;
         if (voice.name === savedVoiceName) {
             option.selected = true;
         }
