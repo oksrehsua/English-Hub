@@ -1055,12 +1055,7 @@ if ('speechSynthesis' in window) {
 
 function getSelectedVoice() {
     const voices = window.speechSynthesis.getVoices();
-    let usVoices = voices.filter(v => (v.lang === 'en-US' || v.lang === 'en_US') && v.localService === true);
-    
-    // ローカル音声が見つからない場合のフォールバック
-    if (usVoices.length === 0) {
-        usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
-    }
+    let usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
     
     if (usVoices.length === 0) return null;
 
@@ -1080,21 +1075,15 @@ function initVoiceList() {
     const savedVoiceName = localStorage.getItem('selected_us_voice') || 'random';
 
     const voices = window.speechSynthesis.getVoices();
-    // en-US 系でローカル音声のみを優先抽出
-    let usVoices = voices.filter(v => (v.lang === 'en-US' || v.lang === 'en_US') && v.localService === true);
-
-    // もしローカル音声が一つもない場合はオンライン音声も含める
-    if (usVoices.length === 0) {
-        usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
-    }
+    let usVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
 
     // ドロップダウンを初期化（ランダムを一番上に）
-    voiceSelect.innerHTML = '<option value="random">ランダム（安定したローカル音声）</option>';
+    voiceSelect.innerHTML = '<option value="random">ランダム</option>';
 
     usVoices.forEach(voice => {
         const option = document.createElement('option');
         option.value = voice.name;
-        option.textContent = voice.name + (voice.localService ? '' : ' (オンライン)');
+        option.textContent = voice.name + (voice.localService ? ' (ローカル)' : ' (オンライン)');
         if (voice.name === savedVoiceName) {
             option.selected = true;
         }
