@@ -917,10 +917,14 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
         playCountdown(() => {
             const utterance = new SpeechSynthesisUtterance(text);
             window.__currentUtterance = utterance; // Prevent GC
-            utterance.lang = 'en-US';
-            utterance.rate = rate;
             const selectedVoice = getSelectedVoice();
-            if (selectedVoice) utterance.voice = selectedVoice;
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                utterance.lang = selectedVoice.lang;
+            } else {
+                utterance.lang = 'en-US';
+            }
+            utterance.rate = rate;
 
             utterance.onend = () => {
                 currentIteration++;
@@ -1015,10 +1019,14 @@ function playAudioStep(text, btnElem = null) {
         playCountdown(() => {
             const utterance = new SpeechSynthesisUtterance(text);
             window.__currentUtterance = utterance; // Prevent GC
-            utterance.lang = 'en-US';
-            utterance.rate = rates[rateIdx];
             const selectedVoice = getSelectedVoice();
-            if (selectedVoice) utterance.voice = selectedVoice;
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                utterance.lang = selectedVoice.lang;
+            } else {
+                utterance.lang = 'en-US';
+            }
+            utterance.rate = rates[rateIdx];
 
             utterance.onend = () => {
                 repeatIdx++;

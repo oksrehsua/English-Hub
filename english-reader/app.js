@@ -285,6 +285,7 @@ class EnglishReader {
 
         if (currentVoice) {
             utterance.voice = currentVoice;
+            utterance.lang = currentVoice.lang;
         } else {
             utterance.lang = 'en-US';
         }
