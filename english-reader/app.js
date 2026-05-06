@@ -38,8 +38,14 @@ class EnglishReader {
 
         // Voice selection
         if (window.speechSynthesis) {
-            window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.addEventListener('voiceschanged', () => this.loadVoices());
+            }
             this.loadVoices();
+            
+            // To ensure late-loading voices are caught
+            setTimeout(() => this.loadVoices(), 100);
+            setTimeout(() => this.loadVoices(), 1000);
         }
 
         this.voiceSelect.addEventListener('change', () => {
@@ -52,19 +58,43 @@ class EnglishReader {
     loadVoices() {
         const currentVoiceName = this.voiceSelect.value || (this.selectedVoice ? this.selectedVoice.name : null);
 
-        // Filter for American English specifically
-        this.voices = window.speechSynthesis.getVoices().filter(v => v.lang === 'en-US' || v.lang === 'en_US');
-        
-        if (this.voices.length === 0) {
-            // Fallback: show any English if no US English is found
-            this.voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
-        }
+        // Filter for any English voices
+        this.voices = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('en'));
 
         this.voiceSelect.innerHTML = '';
         this.voices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
-            option.textContent = `${voice.name} (${voice.lang})`;
+            
+            let chara = '';
+            const knownChars = {
+                'Microsoft David': '男性、少し低め',
+                'Microsoft Zira': '女性、標準的',
+                'Microsoft Mark': '男性、少し高め',
+                'Google US English': '女性、標準的',
+                'Google UK English Female': '女性、イギリス',
+                'Google UK English Male': '男性、イギリス',
+                'Aria': '女性、クリアで自然',
+                'Guy': '男性、落ち着いた・自然',
+                'Jenny': '女性、明るい・自然',
+                'Ana': '子供(女の子)',
+                'Christopher': '男性、自然',
+                'Eric': '男性、標準的',
+                'Michelle': '女性、少し低め',
+                'Roger': '男性、少し高め',
+                'Steffan': '男性、標準的'
+            };
+            for (const [key, value] of Object.entries(knownChars)) {
+                if (voice.name.includes(key)) {
+                    chara = value;
+                    break;
+                }
+            }
+            if (!chara) {
+                chara = voice.localService ? 'ローカル' : 'オンライン';
+            }
+
+            option.textContent = `${voice.name} (${chara})`;
             if (voice.name === currentVoiceName) {
                 option.selected = true;
             }
