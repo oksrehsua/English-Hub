@@ -1108,7 +1108,26 @@ function initVoiceList() {
             'Eric': '男性、標準的',
             'Michelle': '女性、少し低め',
             'Roger': '男性、少し高め',
-            'Steffan': '男性、標準的'
+            'Steffan': '男性、標準的',
+            'Ava': '女性、自然',
+            'Andrew': '男性、自然',
+            'Brian': '男性、自然',
+            'Emma': '女性、自然',
+            'Natasha': '女性、自然',
+            'William': '男性、自然',
+            'Cora': '女性、自然',
+            'Elizabeth': '女性、自然',
+            'Ryan': '男性、自然',
+            'Sonia': '女性、自然',
+            'Ashley': '女性、自然',
+            'Libby': '女性、自然',
+            'Liam': '男性、自然',
+            'Luke': '男性、自然',
+            'Sam': '男性、自然',
+            'Thomas': '男性、自然',
+            'George': '男性、イギリス',
+            'Hazel': '女性、イギリス',
+            'Susan': '女性、イギリス'
         };
         for (const [key, value] of Object.entries(knownChars)) {
             if (voice.name.includes(key)) {
