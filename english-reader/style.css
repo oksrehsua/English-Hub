@@ -218,11 +218,13 @@ input[type="file"] {
     border: 1px solid var(--border-color);
     border-radius: 16px;
     transition: all 0.3s;
+    cursor: pointer;
 }
 
 .row-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(56, 189, 248, 0.4);
+    transform: translateY(-2px);
 }
 
 .row-item.playing {
@@ -257,6 +259,8 @@ input[type="file"] {
 
 .row-actions {
     flex-shrink: 0;
+    display: flex;
+    gap: 0.5rem;
 }
 
 .btn-play-small {
@@ -270,6 +274,21 @@ input[type="file"] {
 .btn-play-small:hover {
     background: var(--accent-color);
     color: var(--bg-color);
+}
+
+.btn-translate-small {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    padding: 0.5rem 0.8rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+}
+
+.btn-translate-small:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
 }
 
 .empty-state {

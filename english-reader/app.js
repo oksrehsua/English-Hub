@@ -140,13 +140,17 @@ class EnglishReader {
             const item = document.createElement('div');
             item.className = 'row-item';
             item.id = `row-${index}`;
+            // Entire row click starts "All Play" from this row
+            item.onclick = () => this.playFrom(index);
+            
             item.innerHTML = `
                 <div class="row-content">
                     <div class="row-text">${this.escapeHtml(row.english)}</div>
                     <div class="row-translation ${this.showTranslations ? '' : 'hidden'}">${this.escapeHtml(row.japanese)}</div>
                 </div>
                 <div class="row-actions">
-                    <button class="btn-play-small" onclick="readerApp.playRow(${index})">再生</button>
+                    <button class="btn-translate-small" onclick="event.stopPropagation(); readerApp.toggleRowTranslation(${index})">和訳</button>
+                    <button class="btn-play-small" onclick="event.stopPropagation(); readerApp.playRow(${index})">再生</button>
                 </div>
             `;
             this.contentList.appendChild(item);
@@ -164,6 +168,16 @@ class EnglishReader {
                 el.classList.add('hidden');
             }
         });
+    }
+
+    toggleRowTranslation(index) {
+        const row = document.getElementById(`row-${index}`);
+        if (row) {
+            const translation = row.querySelector('.row-translation');
+            if (translation) {
+                translation.classList.toggle('hidden');
+            }
+        }
     }
 
     setSpeed(speed) {
@@ -184,24 +198,45 @@ class EnglishReader {
         this.highlightRow(index);
     }
 
-    playAll() {
+    playFrom(index) {
         this.stopPlayback();
         this.isPlayingAll = true;
-        this.currentIndex = 0;
+        this.currentIndex = index;
         this.playNext();
+        this.btnAllPlay.textContent = '停止';
+    }
+
+    playAll() {
+        if (this.isPlayingAll) {
+            this.stopPlayback();
+            return;
+        }
+
+        this.isPlayingAll = true;
+        
+        // If we finished the list or haven't started, start from 0
+        if (this.currentIndex < 0 || this.currentIndex >= this.csvData.length) {
+            this.currentIndex = 0;
+        }
+        
+        this.playNext();
+        this.btnAllPlay.textContent = '停止';
     }
 
     playNext() {
         if (!this.isPlayingAll || this.currentIndex >= this.csvData.length) {
             this.isPlayingAll = false;
             this.highlightRow(-1);
+            this.btnAllPlay.textContent = 'ALL再生';
             return;
         }
 
         this.highlightRow(this.currentIndex);
         this.speak(this.csvData[this.currentIndex].english, () => {
-            this.currentIndex++;
-            setTimeout(() => this.playNext(), 500);
+            if (this.isPlayingAll) {
+                this.currentIndex++;
+                setTimeout(() => this.playNext(), 500);
+            }
         });
     }
 
@@ -242,6 +277,7 @@ class EnglishReader {
         window.speechSynthesis.cancel();
         this.currentUtterance = null;
         this.highlightRow(-1);
+        this.btnAllPlay.textContent = 'ALL再生';
     }
 
     highlightRow(index) {
