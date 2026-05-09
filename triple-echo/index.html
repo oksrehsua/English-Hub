@@ -40,15 +40,27 @@
             <option value="all">すべてのレベル</option>
         </select>
 
-        <p style="margin-top: 15px;">3. 出題形式を選択してください:</p>
-        <select id="format-select">
-            <option value="all">すべての形式</option>
-        </select>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px; margin-bottom: 5px;">
+            <p style="margin: 0;">3. 出題形式を選択してください:</p>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="secondary-btn" onclick="toggleCheckboxes('format-filter-cb', true)" style="margin: 0; padding: 4px 12px; font-size: 0.8rem; box-shadow: 2px 2px 0 var(--border);">すべて選択</button>
+                <button type="button" class="secondary-btn" onclick="toggleCheckboxes('format-filter-cb', false)" style="margin: 0; padding: 4px 12px; font-size: 0.8rem; box-shadow: 2px 2px 0 var(--border);">すべて外す</button>
+            </div>
+        </div>
+        <div id="format-checkboxes" style="display: flex; flex-wrap: wrap; gap: 15px; padding: 15px; background: #fff; border: 2px solid #000; border-radius: 12px; box-shadow: 3px 3px 0 var(--border);">
+            <span style="color: #666; font-size: 0.9em;">CSVを読み込むとここに表示されます</span>
+        </div>
 
-        <p style="margin-top: 15px;">4. 単元を選択してください:</p>
-        <select id="unit-category-select">
-            <option value="all">すべての単元</option>
-        </select>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px; margin-bottom: 5px;">
+            <p style="margin: 0;">4. 単元を選択してください:</p>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="secondary-btn" onclick="toggleCheckboxes('category-filter-cb', true)" style="margin: 0; padding: 4px 12px; font-size: 0.8rem; box-shadow: 2px 2px 0 var(--border);">すべて選択</button>
+                <button type="button" class="secondary-btn" onclick="toggleCheckboxes('category-filter-cb', false)" style="margin: 0; padding: 4px 12px; font-size: 0.8rem; box-shadow: 2px 2px 0 var(--border);">すべて外す</button>
+            </div>
+        </div>
+        <div id="unit-category-checkboxes" style="display: flex; flex-wrap: wrap; gap: 15px; padding: 15px; background: #fff; border: 2px solid #000; border-radius: 12px; box-shadow: 3px 3px 0 var(--border);">
+            <span style="color: #666; font-size: 0.9em;">CSVを読み込むとここに表示されます</span>
+        </div>
 
         <p style="margin-top: 15px;">5. 出題数を入力してください（空欄で全て出題）:</p>
         <input type="number" id="count-input" value="10" min="1" placeholder="例: 10" style="max-width: 150px;">

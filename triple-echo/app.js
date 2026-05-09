@@ -198,27 +198,55 @@ function updateFilters() {
         });
     }
 
-    const formatSelect = document.getElementById('format-select');
-    if (formatSelect) {
-        formatSelect.innerHTML = '<option value="all">すべての形式</option>';
+    const formatContainer = document.getElementById('format-checkboxes');
+    if (formatContainer) {
+        formatContainer.innerHTML = '';
         const sortedFormats = Array.from(formatSet).sort();
         sortedFormats.forEach(fmt => {
-            const option = document.createElement('option');
-            option.value = fmt;
-            option.textContent = fmt;
-            formatSelect.appendChild(option);
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '5px';
+            label.style.cursor = 'pointer';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = fmt;
+            checkbox.checked = true; // Default to checked
+            checkbox.className = 'format-filter-cb';
+            checkbox.style.width = '18px';
+            checkbox.style.height = '18px';
+            checkbox.style.accentColor = 'var(--primary)';
+            
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(fmt));
+            formatContainer.appendChild(label);
         });
     }
 
-    const categorySelect = document.getElementById('unit-category-select');
-    if (categorySelect) {
-        categorySelect.innerHTML = '<option value="all">すべての単元（CSVから取得）</option>';
+    const categoryContainer = document.getElementById('unit-category-checkboxes');
+    if (categoryContainer) {
+        categoryContainer.innerHTML = '';
         const sortedCategories = Array.from(categorySet).sort();
         sortedCategories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = cat;
-            categorySelect.appendChild(option);
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '5px';
+            label.style.cursor = 'pointer';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = cat;
+            checkbox.checked = true; // Default to checked
+            checkbox.className = 'category-filter-cb';
+            checkbox.style.width = '18px';
+            checkbox.style.height = '18px';
+            checkbox.style.accentColor = 'var(--secondary)';
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(cat));
+            categoryContainer.appendChild(label);
         });
     }
 
@@ -328,12 +356,24 @@ function shuffleArray(array) {
     }
 }
 
+function toggleCheckboxes(className, isChecked) {
+    const checkboxes = document.querySelectorAll('.' + className);
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+    });
+}
+
 function startQuiz() {
     initGlobalAudio();
     const errorMsg = document.getElementById('setup-error');
     const selectedLevel = document.getElementById('level-select').value;
-    const selectedFormat = document.getElementById('format-select').value;
-    const selectedCategory = document.getElementById('unit-category-select').value;
+    
+    const formatCheckboxes = document.querySelectorAll('.format-filter-cb:checked');
+    const selectedFormats = Array.from(formatCheckboxes).map(cb => cb.value);
+
+    const categoryCheckboxes = document.querySelectorAll('.category-filter-cb:checked');
+    const selectedCategories = Array.from(categoryCheckboxes).map(cb => cb.value);
+
     const tagSelectVal = document.getElementById('tag-select').value.trim().toLowerCase();
     const filterTags = tagSelectVal ? [tagSelectVal] : [];
 
@@ -343,17 +383,29 @@ function startQuiz() {
         return;
     }
 
+    if (selectedFormats.length === 0) {
+        errorMsg.textContent = '出題形式を1つ以上選択してください。';
+        errorMsg.style.display = 'inline-block';
+        return;
+    }
+
+    if (selectedCategories.length === 0) {
+        errorMsg.textContent = '単元を1つ以上選択してください。';
+        errorMsg.style.display = 'inline-block';
+        return;
+    }
+
     errorMsg.style.display = 'none';
-    startQuizWithQuestions(selectedLevel, selectedFormat, selectedCategory, filterTags);
+    startQuizWithQuestions(selectedLevel, selectedFormats, selectedCategories, filterTags);
 }
 
-function startQuizWithQuestions(selectedLevel, selectedFormat, selectedCategory, filterTags) {
+function startQuizWithQuestions(selectedLevel, selectedFormats, selectedCategories, filterTags) {
     const errorMsg = document.getElementById('setup-error');
 
     currentQuestions = allQuestions.filter(q => {
         const levelMatch = selectedLevel === 'all' || q.level === selectedLevel;
-        const formatMatch = selectedFormat === 'all' || q.format === selectedFormat;
-        const categoryMatch = selectedCategory === 'all' || q.category === selectedCategory;
+        const formatMatch = selectedFormats.includes(q.format);
+        const categoryMatch = selectedCategories.includes(q.category);
         let tagMatch = true;
         if (filterTags.length > 0) {
             const lowerQTags = q.tags.toLowerCase();
