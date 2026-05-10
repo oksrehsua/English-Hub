@@ -62,8 +62,13 @@
             <span style="color: #666; font-size: 0.9em;">CSVを読み込むとここに表示されます</span>
         </div>
 
-        <p style="margin-top: 15px;">5. 出題数を入力してください（空欄で全て出題）:</p>
-        <input type="number" id="count-input" value="10" min="1" placeholder="例: 10" style="max-width: 150px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px;">
+            <p style="margin: 0;">5. 出題数を入力してください（空欄で全て出題）:</p>
+            <div style="font-weight: bold; color: var(--primary); font-size: 1.1rem; background: #e0f7fa; padding: 4px 12px; border-radius: 8px; border: 2px solid #000;">
+                該当問題数: <span id="available-questions-count">0</span> 問
+            </div>
+        </div>
+        <input type="number" id="count-input" value="10" min="1" placeholder="例: 10" style="max-width: 150px; margin-top: 5px;">
 
         <p style="margin-top: 15px;">6. 絞り込みタグを選択してください:</p>
         <select id="tag-select">

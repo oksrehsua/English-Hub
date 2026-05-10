@@ -196,6 +196,7 @@ function updateFilters() {
             option.textContent = !isNaN(Number(lvl)) ? `レベル ${lvl}` : lvl;
             levelSelect.appendChild(option);
         });
+        levelSelect.addEventListener('change', updateAvailableQuestionsCount);
     }
 
     const formatContainer = document.getElementById('format-checkboxes');
@@ -217,6 +218,7 @@ function updateFilters() {
             checkbox.style.width = '18px';
             checkbox.style.height = '18px';
             checkbox.style.accentColor = 'var(--primary)';
+            checkbox.addEventListener('change', updateAvailableQuestionsCount);
             
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(fmt));
@@ -243,6 +245,7 @@ function updateFilters() {
             checkbox.style.width = '18px';
             checkbox.style.height = '18px';
             checkbox.style.accentColor = 'var(--secondary)';
+            checkbox.addEventListener('change', updateAvailableQuestionsCount);
 
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(cat));
@@ -260,7 +263,10 @@ function updateFilters() {
             option.textContent = tag;
             tagSelect.appendChild(option);
         });
+        tagSelect.addEventListener('change', updateAvailableQuestionsCount);
     }
+    
+    updateAvailableQuestionsCount();
 }
 
 function startReviewMode() {
@@ -361,6 +367,43 @@ function toggleCheckboxes(className, isChecked) {
     checkboxes.forEach(cb => {
         cb.checked = isChecked;
     });
+    updateAvailableQuestionsCount();
+}
+
+function updateAvailableQuestionsCount() {
+    if (allQuestions.length === 0) {
+        const countSpan = document.getElementById('available-questions-count');
+        if (countSpan) countSpan.textContent = '0';
+        return;
+    }
+
+    const selectedLevel = document.getElementById('level-select').value;
+    
+    const formatCheckboxes = document.querySelectorAll('.format-filter-cb:checked');
+    const selectedFormats = Array.from(formatCheckboxes).map(cb => cb.value);
+
+    const categoryCheckboxes = document.querySelectorAll('.category-filter-cb:checked');
+    const selectedCategories = Array.from(categoryCheckboxes).map(cb => cb.value);
+
+    const tagSelectVal = document.getElementById('tag-select').value.trim().toLowerCase();
+    const filterTags = tagSelectVal ? [tagSelectVal] : [];
+
+    const availableQuestions = allQuestions.filter(q => {
+        const levelMatch = selectedLevel === 'all' || q.level === selectedLevel;
+        const formatMatch = selectedFormats.includes(q.format);
+        const categoryMatch = selectedCategories.includes(q.category);
+        let tagMatch = true;
+        if (filterTags.length > 0) {
+            const lowerQTags = q.tags.toLowerCase();
+            tagMatch = filterTags.every(t => lowerQTags.includes(t));
+        }
+        return levelMatch && formatMatch && categoryMatch && tagMatch;
+    });
+
+    const countSpan = document.getElementById('available-questions-count');
+    if (countSpan) {
+        countSpan.textContent = availableQuestions.length;
+    }
 }
 
 function startQuiz() {
