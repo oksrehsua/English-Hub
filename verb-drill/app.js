@@ -46,6 +46,26 @@ function setupEventListeners() {
     });
 
     document.getElementById('btn-skip').addEventListener('click', skipQuestion);
+
+    const fileInput = document.getElementById('csv-file-input');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('file-name-display').textContent = file.name;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    verbsData = results.data;
+                    resetCombo();
+                    loadNextQuestion();
+                }
+            });
+        });
+    }
 }
 
 function initGame() {

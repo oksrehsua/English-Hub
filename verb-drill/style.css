@@ -62,6 +62,44 @@ h1 {
     color: #fbbf24;
 }
 
+.settings-panel {
+    background: rgba(30, 41, 59, 0.4);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border);
+}
+
+#csv-file-input {
+    display: none;
+}
+
+.file-label {
+    background: var(--border);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-label:hover {
+    background: #475569;
+}
+
+#file-name-display {
+    font-size: 0.9rem;
+    color: #94a3b8;
+}
+
 .drill-card {
     background: var(--card-bg);
     backdrop-filter: blur(10px);
