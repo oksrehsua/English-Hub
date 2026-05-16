@@ -1,0 +1,184 @@
+:root {
+    --bg: #0f172a;
+    --card-bg: rgba(30, 41, 59, 0.7);
+    --text: #f8fafc;
+    --primary: #10b981;
+    --error: #ef4444;
+    --border: #334155;
+    --focus: #3b82f6;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+}
+
+.app-container {
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.back-link {
+    color: var(--text);
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    font-weight: 600;
+}
+
+.back-link:hover {
+    opacity: 1;
+}
+
+h1 {
+    font-family: 'Yusei Magic', sans-serif;
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+#combo-counter {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fbbf24;
+}
+
+.drill-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.japanese-word {
+    font-family: 'Yusei Magic', sans-serif;
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+}
+
+.inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.input-group {
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 16px;
+    font-size: 1.2rem;
+    font-family: 'Outfit', sans-serif;
+    background: rgba(15, 23, 42, 0.6);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    transition: all 0.2s;
+    outline: none;
+}
+
+.input-group input:focus {
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.input-group input.correct {
+    border-color: var(--primary);
+    background: rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.input-group input.error {
+    border-color: var(--error);
+}
+
+.feedback {
+    min-height: 24px;
+    margin-top: 6px;
+    font-size: 1.1rem;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: 0.05em;
+    padding-left: 8px;
+}
+
+.diff-correct {
+    color: var(--primary);
+}
+
+.diff-incorrect {
+    color: var(--error);
+    font-weight: 800;
+    text-decoration: underline;
+}
+
+.controls {
+    margin-top: 30px;
+}
+
+#btn-skip {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: #94a3b8;
+    padding: 10px 24px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+#btn-skip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.shake {
+    animation: shake 0.3s ease-in-out;
+}
+
+@media (max-width: 600px) {
+    .drill-card {
+        padding: 24px;
+    }
+    .japanese-word {
+        font-size: 2rem;
+    }
+}

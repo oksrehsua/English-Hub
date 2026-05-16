@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verb Conjugation Drill</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Yusei+Magic&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <a href="../index.html" class="back-link">← Hub</a>
+            <h1>Verb Drill</h1>
+            <div class="stats">
+                <span id="combo-counter">🔥 0 Combo</span>
+            </div>
+        </header>
+
+        <main class="drill-card">
+            <h2 id="japanese-word" class="japanese-word">読み込み中...</h2>
+            
+            <div class="inputs-grid">
+                <div class="input-group">
+                    <label>Present (現在形)</label>
+                    <input type="text" id="input-present" autocomplete="off">
+                    <div class="feedback" id="feedback-present"></div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Present Participle (-ing形)</label>
+                    <input type="text" id="input-present_participle" autocomplete="off">
+                    <div class="feedback" id="feedback-present_participle"></div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Past (過去形)</label>
+                    <input type="text" id="input-past" autocomplete="off">
+                    <div class="feedback" id="feedback-past"></div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Past Participle (過去分詞)</label>
+                    <input type="text" id="input-past_participle" autocomplete="off">
+                    <div class="feedback" id="feedback-past_participle"></div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="btn-skip">わからない (Skip)</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
