@@ -8,7 +8,7 @@
     --accent-yellow: #fef0b4; /* Pastel yellow for buttons */
     --border: #4a4a4a; /* Soft dark gray for outline */
     --correct: #b4edd7; /* Pastel green for correct */
-    --error: #ffb4b4; /* Pastel red for error */
+    --error: #e95c8b; /* Dark pink for error */
 }
 
 * {
@@ -212,7 +212,7 @@ h1 {
 
 .input-group input.error {
     background: var(--error);
-    color: var(--text-dark);
+    color: #ffffff;
 }
 
 .feedback {
@@ -228,7 +228,7 @@ h1 {
 }
 
 .diff-incorrect {
-    color: #e11d48;
+    color: var(--error);
     text-decoration: underline;
 }
 
