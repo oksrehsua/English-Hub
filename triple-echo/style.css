@@ -325,6 +325,24 @@ button.is-playing {
     text-underline-offset: 4px;
 }
 
+.diff-err {
+    color: var(--danger);
+    text-decoration: underline wavy;
+    font-weight: 900;
+    background-color: #fff0f0;
+    padding: 0 2px;
+    border-radius: 4px;
+}
+
+.your-answer-label {
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 /* Explanation Area */
 .explanation {
     background: #ffffff;

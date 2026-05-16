@@ -319,6 +319,7 @@ function resetToSetup() {
     }
 }
 
+
 function parseCSV(text) {
     const rows = [];
     let curRow = [];
@@ -616,10 +617,17 @@ function getEnglishText(q) {
     }
     const choiceRegex = /\([^)]*?\/[^)]*?\)/g;
     const blankCount = (q.text.match(/\(\s*\)/g) || []).length;
-    const answerWords = q.answer.includes('/') ? q.answer.split('/') : q.answer.split(/[\s,]+/);
+    let answerForText = q.answer || '';
+    if (!((q.format === '穴埋め' || q.format === '英単語') && blankCount > 1)) {
+        if (answerForText.includes('/')) {
+            answerForText = answerForText.split('/')[0].trim();
+        }
+    }
+
+    const answerWords = answerForText.includes('/') ? answerForText.split('/') : answerForText.split(/[\s,]+/);
 
     function replaceBlanksByWord(text, replaceFn) {
-        if (blankCount <= 1) return text.replace(/\(\s*\)/g, replaceFn(q.answer));
+        if (blankCount <= 1) return text.replace(/\(\s*\)/g, replaceFn(answerForText));
         let wordIdx = 0;
         return text.replace(/\(\s*\)/g, () => {
             const word = wordIdx < answerWords.length ? answerWords[wordIdx] : '';
@@ -632,13 +640,13 @@ function getEnglishText(q) {
     const usePlainAnswerDisplay = ['和文英訳', '誤文訂正', '書き換え', 'Q&A作成'].includes(q.format);
 
     if (usePlainAnswerDisplay) {
-        englishText = q.answer;
+        englishText = answerForText;
     } else {
-        englishText = q.text.replace(choiceRegex, q.answer);
+        englishText = q.text.replace(choiceRegex, answerForText);
         englishText = replaceBlanksByWord(englishText, w => w);
-        englishText = englishText.replace(/\[\s*.*?\s*\]/g, q.answer);
+        englishText = englishText.replace(/\[\s*.*?\s*\]/g, answerForText);
         englishText = englishText.replace(/\([^)]*[ぁ-んァ-ン一-龥]+[^)]*\)/g, '').trim();
-        if (!englishText || englishText.length < 2) englishText = q.answer;
+        if (!englishText || englishText.length < 2) englishText = answerForText;
     }
     return englishText;
 }
@@ -708,6 +716,62 @@ function getAcceptedAnswers(q, blankCount) {
     }
 
     return rawAnswer.split('/').map(s => sanitize(s)).filter(Boolean);
+}
+
+function getCharDiffHtml(user, correct) {
+    const n = user.length;
+    const m = correct.length;
+    const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+    for (let i = 1; i <= n; i++) {
+        for (let j = 1; j <= m; j++) {
+            if (user[i - 1].toLowerCase() === correct[j - 1].toLowerCase()) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+
+    let i = n, j = m;
+    let res = [];
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && user[i - 1].toLowerCase() === correct[j - 1].toLowerCase()) {
+            res.push(user[i - 1]);
+            i--; j--;
+        } else if (i > 0 && (j === 0 || dp[i - 1][j] >= dp[i][j - 1])) {
+            res.push(`<span class="diff-err">${user[i - 1]}</span>`);
+            i--;
+        } else {
+            j--;
+        }
+    }
+    return res.reverse().join('');
+}
+
+function getSentenceDiffHtml(user, correct) {
+    if (!user) return '';
+    const userWords = user.trim().split(/\s+/);
+    const correctWords = correct.trim().split(/\s+/);
+    
+    let html = '';
+    const maxLen = Math.max(userWords.length, correctWords.length);
+    
+    for (let i = 0; i < maxLen; i++) {
+        const u = userWords[i] || '';
+        const c = correctWords[i] || '';
+        
+        if (u && c && sanitize(u) === sanitize(c)) {
+            html += u + ' ';
+        } else if (u) {
+            if (c) {
+                html += getCharDiffHtml(u, c) + ' ';
+            } else {
+                html += `<span class="diff-err">${u}</span> `;
+            }
+        }
+    }
+    return html.trim();
 }
 
 function checkAnswer() {
@@ -780,8 +844,13 @@ function checkAnswer() {
         resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>`;
         mistakes = mistakes.filter(m => m.id !== q.id);
     } else {
+        const userDiffHtml = getSentenceDiffHtml(userAnswer, acceptedAnswers[0]);
         resultMsg.innerHTML = `
             <div class="result-incorrect">❌ 不正解</div>
+            <div class="result-sentence" style="background: #fff; margin-bottom: 8px; border-style: dashed;">
+                <div class="your-answer-label">あなたの解答:</div>
+                ${userDiffHtml || '<span style="color: #999;">(未入力)</span>'}
+            </div>
             <div class="result-sentence">正解: ${answerSentenceHtml}</div>
         `;
         if (!mistakes.some(m => m.id === q.id)) mistakes.push(q);
