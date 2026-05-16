@@ -1,11 +1,14 @@
 :root {
-    --bg: #0f172a;
-    --card-bg: rgba(30, 41, 59, 0.7);
-    --text: #f8fafc;
-    --primary: #10b981;
-    --error: #ef4444;
-    --border: #334155;
-    --focus: #3b82f6;
+    --bg-pink: #ffeaf0; /* Softer pastel pink grid background */
+    --card-bg: #ffffff;
+    --text-dark: #333333;
+    --text-gray: #666666;
+    --primary-pink: #ff85a1; /* Cute pink for accents */
+    --accent-blue: #d4effa; /* Pastel blue for inputs */
+    --accent-yellow: #fef0b4; /* Pastel yellow for buttons */
+    --border: #4a4a4a; /* Soft dark gray for outline */
+    --correct: #b4edd7; /* Pastel green for correct */
+    --error: #ffb4b4; /* Pastel red for error */
 }
 
 * {
@@ -15,14 +18,19 @@
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
-    background-color: var(--bg);
-    color: var(--text);
+    font-family: "M PLUS Rounded 1c", 'Outfit', sans-serif;
+    background-color: var(--bg-pink);
+    color: var(--text-dark);
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+    /* Cute white grid pattern */
+    background-image: 
+        linear-gradient(white 2px, transparent 2px),
+        linear-gradient(90deg, white 2px, transparent 2px);
+    background-size: 30px 30px;
+    background-position: center center;
 }
 
 .app-container {
@@ -35,42 +43,54 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 .back-link {
-    color: var(--text);
+    color: var(--text-dark);
     text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-    font-weight: 600;
+    font-weight: 700;
+    background: var(--card-bg);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--border);
+    transition: all 0.2s;
+    font-size: 0.9rem;
 }
 
 .back-link:hover {
-    opacity: 1;
+    background: var(--accent-yellow);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 rgba(74, 74, 74, 0.1);
 }
 
 h1 {
-    font-family: 'Yusei Magic', sans-serif;
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    font-weight: 800;
     font-size: 2rem;
-    color: var(--primary);
+    color: var(--text-dark);
+    letter-spacing: 0.05em;
 }
 
 #combo-counter {
     font-size: 1.2rem;
     font-weight: 800;
-    color: #fbbf24;
+    color: var(--primary-pink);
+    background: var(--card-bg);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--border);
 }
 
 .settings-panel {
-    background: rgba(30, 41, 59, 0.4);
-    border-radius: 16px;
-    padding: 16px;
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 16px 20px;
     margin-bottom: 24px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    border: 1px solid var(--border);
+    gap: 12px;
+    border: 2px solid var(--border);
 }
 
 #csv-file-input {
@@ -78,13 +98,14 @@ h1 {
 }
 
 .file-label {
-    background: var(--border);
-    color: var(--text);
+    background: var(--accent-yellow);
+    color: var(--text-dark);
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: 20px;
     cursor: pointer;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
+    border: 2px solid var(--border);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -92,92 +113,122 @@ h1 {
 }
 
 .file-label:hover {
-    background: #475569;
+    background: #ffe680;
+    transform: translateY(-2px);
 }
 
 #file-name-display {
     font-size: 0.9rem;
-    color: #94a3b8;
+    color: var(--text-gray);
+    font-weight: 600;
 }
 
+/* Main Drill Card */
 .drill-card {
+    position: relative;
     background: var(--card-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border);
-    border-radius: 24px;
+    border: 2px solid var(--border);
+    border-radius: 30px;
     padding: 40px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     text-align: center;
 }
 
+/* Notebook ring decorations */
+.drill-card::before, .drill-card::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    width: 14px;
+    height: 14px;
+    background: var(--bg-pink);
+    border: 2px solid var(--border);
+    border-radius: 50%;
+}
+
+.drill-card::before { left: 24px; }
+.drill-card::after { right: 24px; }
+
 .japanese-word {
-    font-family: 'Yusei Magic', sans-serif;
-    font-size: 2.5rem;
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    font-weight: 800;
+    font-size: 2.8rem;
+    margin-top: 10px;
     margin-bottom: 30px;
+    color: var(--primary-pink); /* Cute pink text for the Japanese word */
 }
 
 .inputs-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 24px;
 }
 
+/* Badge style label overlapping the input */
 .input-group {
-    text-align: left;
+    text-align: center;
+    position: relative;
+    padding-top: 14px; /* space for the badge */
 }
 
 .input-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    color: #cbd5e1;
-    font-weight: 600;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    padding: 2px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--text-dark);
+    font-weight: 700;
+    z-index: 1;
 }
 
 .input-group input {
     width: 100%;
-    padding: 16px;
-    font-size: 1.2rem;
+    padding: 24px 16px 16px;
+    font-size: 1.4rem;
+    text-align: center;
     font-family: 'Outfit', sans-serif;
-    background: rgba(15, 23, 42, 0.6);
+    font-weight: 700;
+    background: var(--accent-blue);
     border: 2px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
+    border-radius: 20px;
+    color: var(--text-dark);
     transition: all 0.2s;
     outline: none;
 }
 
 .input-group input:focus {
-    border-color: var(--focus);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(212, 239, 250, 0.8);
 }
 
 .input-group input.correct {
-    border-color: var(--primary);
-    background: rgba(16, 185, 129, 0.1);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    background: var(--correct);
+    border-color: var(--border);
 }
 
 .input-group input.error {
-    border-color: var(--error);
+    background: var(--error);
+    color: var(--text-dark);
 }
 
 .feedback {
     min-height: 24px;
     margin-top: 6px;
-    font-size: 1.1rem;
-    font-family: 'Outfit', sans-serif;
-    letter-spacing: 0.05em;
-    padding-left: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-gray);
 }
 
 .diff-correct {
-    color: var(--primary);
+    color: #10b981;
 }
 
 .diff-incorrect {
-    color: var(--error);
-    font-weight: 800;
+    color: #e11d48;
     text-decoration: underline;
 }
 
@@ -186,20 +237,21 @@ h1 {
 }
 
 #btn-skip {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: #94a3b8;
-    padding: 10px 24px;
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    color: var(--text-gray);
+    padding: 10px 30px;
     border-radius: 50px;
     cursor: pointer;
-    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
     transition: all 0.2s;
-    font-weight: 600;
 }
 
 #btn-skip:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text);
+    background: #f1f5f9;
+    color: var(--text-dark);
+    transform: translateY(-2px);
 }
 
 @keyframes shake {
@@ -214,9 +266,13 @@ h1 {
 
 @media (max-width: 600px) {
     .drill-card {
-        padding: 24px;
+        padding: 40px 20px 24px;
     }
     .japanese-word {
-        font-size: 2rem;
+        font-size: 2.2rem;
+    }
+    .input-group input {
+        font-size: 1.2rem;
+        padding: 20px 12px 12px;
     }
 }
