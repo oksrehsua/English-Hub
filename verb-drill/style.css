@@ -264,12 +264,160 @@ h1 {
     animation: shake 0.3s ease-in-out;
 }
 
+.setup-card {
+    padding: 30px;
+    margin-top: 20px;
+}
+
+.setup-title, .result-title {
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+    color: var(--text-dark);
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+}
+
+.total-info {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-gray);
+    margin-bottom: 24px;
+}
+
+#total-questions {
+    color: var(--primary-pink);
+    font-size: 1.4rem;
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.input-row label {
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.input-row input {
+    width: 80px;
+    padding: 10px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+}
+
+.input-row input:focus {
+    border-color: var(--primary-pink);
+}
+
+.btn-primary, .btn-secondary {
+    border: 2px solid var(--border);
+    padding: 14px 32px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+    font-family: 'M PLUS Rounded 1c', sans-serif;
+}
+
+.btn-primary {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+}
+
+.btn-primary:hover {
+    background: #ffe680;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 rgba(74, 74, 74, 0.1);
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: var(--text-gray);
+    margin-top: 16px;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+    color: var(--text-dark);
+    transform: translateY(-2px);
+}
+
+.progress-info {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-gray);
+}
+
+.score-display {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--primary-pink);
+    margin-bottom: 30px;
+}
+
+#mistakes-container {
+    background: #fff5f7;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.mistakes-title {
+    font-size: 1.2rem;
+    color: var(--error);
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.mistakes-list {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.mistakes-list li {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.mistakes-list li .jp {
+    color: var(--primary-pink);
+    margin-bottom: 4px;
+    display: block;
+}
+
 @media (max-width: 600px) {
     .drill-card {
-        padding: 40px 20px 24px;
+        padding: 50px 20px 24px;
     }
     .japanese-word {
         font-size: 2.2rem;
+        margin-top: 20px;
     }
     .input-group input {
         font-size: 1.2rem;

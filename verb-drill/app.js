@@ -1,8 +1,12 @@
 let verbsData = [];
+let activeQuestions = [];
+let mistakes = [];
 let currentVerb = null;
+let currentQuestionIndex = 0;
 let comboCount = 0;
 let inputs = [];
 let keys = ['present', 'present_participle', 'past', 'past_participle'];
+let madeMistakeOnCurrent = false;
 
 // We assume diff_match_patch is loaded globally via CDN
 const dmp = new diff_match_patch();
@@ -12,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     inputs = keys.map(key => document.getElementById(`input-${key}`));
     setupEventListeners();
 
-    // Load CSV
+    // Load Default CSV
     Papa.parse('verbs.csv', {
         download: true,
         header: true,
@@ -20,42 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
         complete: function(results) {
             if (results.data && results.data.length > 0) {
                 verbsData = results.data;
-                initGame();
+                document.getElementById('total-questions').textContent = verbsData.length;
             } else {
-                document.getElementById('japanese-word').textContent = 'CSVをインポートしてください';
+                document.getElementById('total-questions').textContent = '0';
             }
         },
         error: function() {
-            document.getElementById('japanese-word').textContent = 'CSVをインポートしてください';
+            document.getElementById('total-questions').textContent = 'エラー';
         }
     });
 });
 
 function setupEventListeners() {
-    inputs.forEach((input, index) => {
-        // As they type, check if it matches exactly
-        input.addEventListener('input', () => {
-            checkCurrentInput(index);
-        });
-
-        // When pressing Enter, move to next or show diff if wrong
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                submitInput(index);
-            }
-        });
-        
-        // Show diff when they leave the field and it's not empty/correct
-        input.addEventListener('blur', () => {
-            if (input.value.trim() !== '' && !input.classList.contains('correct')) {
-                showDiff(index);
-            }
-        });
-    });
-
-    document.getElementById('btn-skip').addEventListener('click', skipQuestion);
-
+    // CSV Upload
     const fileInput = document.getElementById('csv-file-input');
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
@@ -67,16 +48,12 @@ function setupEventListeners() {
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
-                // Add Shift-JIS encoding in case it's created by Japanese Excel
-                // If it's UTF-8, most browsers still handle it fine or fallback
-                // Actually, PapaParse might fail if encoding doesn't match perfectly, so let's stick to default (UTF-8) and check headers.
                 complete: function(results) {
                     if (!results.data || results.data.length === 0) {
                         alert("エラー: CSVのデータが空か、正しく読み取れませんでした。");
                         return;
                     }
                     
-                    // BOMを削除した上でチェックするための処理
                     const firstRow = results.data[0];
                     const headers = Object.keys(firstRow);
                     const hasJapanese = headers.some(h => h.includes('japanese'));
@@ -87,7 +64,6 @@ function setupEventListeners() {
                         return;
                     }
 
-                    // BOMが含まれていた場合のために、キーをきれいにする
                     const cleanedData = results.data.map(row => {
                         const newRow = {};
                         for (let key in row) {
@@ -98,25 +74,91 @@ function setupEventListeners() {
                     });
 
                     verbsData = cleanedData;
-                    resetCombo();
-                    loadNextQuestion();
+                    document.getElementById('total-questions').textContent = verbsData.length;
                 }
             });
         });
     }
+
+    // Start Button
+    document.getElementById('btn-start').addEventListener('click', () => {
+        if (verbsData.length === 0) {
+            alert("CSVデータがありません。");
+            return;
+        }
+        
+        let count = parseInt(document.getElementById('question-count').value, 10);
+        if (isNaN(count) || count < 1) count = 10;
+        if (count > verbsData.length) count = verbsData.length;
+
+        // Shuffle and pick
+        let shuffled = [...verbsData].sort(() => 0.5 - Math.random());
+        activeQuestions = shuffled.slice(0, count);
+        
+        startDrill();
+    });
+
+    // Skip Button
+    document.getElementById('btn-skip').addEventListener('click', skipQuestion);
+
+    // Input Events
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', () => {
+            checkCurrentInput(index);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitInput(index);
+            }
+        });
+        
+        input.addEventListener('blur', () => {
+            if (input.value.trim() !== '' && !input.classList.contains('correct')) {
+                showDiff(index);
+            }
+        });
+    });
+
+    // Result Screen Buttons
+    document.getElementById('btn-retry-mistakes').addEventListener('click', () => {
+        activeQuestions = [...mistakes];
+        startDrill();
+    });
+
+    document.getElementById('btn-back-home').addEventListener('click', () => {
+        showScreen('screen-setup');
+    });
 }
 
-function initGame() {
+function showScreen(screenId) {
+    document.getElementById('screen-setup').style.display = 'none';
+    document.getElementById('screen-drill').style.display = 'none';
+    document.getElementById('screen-result').style.display = 'none';
+    document.getElementById(screenId).style.display = 'block';
+}
+
+function startDrill() {
+    mistakes = [];
+    currentQuestionIndex = 0;
+    comboCount = 0;
+    resetComboUI();
+    showScreen('screen-drill');
     loadNextQuestion();
 }
 
 function loadNextQuestion() {
-    if (verbsData.length === 0) return;
+    if (currentQuestionIndex >= activeQuestions.length) {
+        showResult();
+        return;
+    }
 
-    // Pick random verb
-    currentVerb = verbsData[Math.floor(Math.random() * verbsData.length)];
+    currentVerb = activeQuestions[currentQuestionIndex];
+    madeMistakeOnCurrent = false;
     
     document.getElementById('japanese-word').textContent = currentVerb.japanese;
+    document.getElementById('question-progress').textContent = `問題 ${currentQuestionIndex + 1} / ${activeQuestions.length}`;
     
     // Reset UI
     inputs.forEach(input => {
@@ -126,7 +168,6 @@ function loadNextQuestion() {
         document.getElementById(`feedback-${input.id.replace('input-', '')}`).innerHTML = '';
     });
     
-    // Focus first input
     inputs[0].focus();
 }
 
@@ -140,7 +181,6 @@ function checkCurrentInput(index) {
         input.classList.remove('error');
         document.getElementById(`feedback-${key}`).innerHTML = '';
         
-        // Check if all correct
         checkAllCorrect();
     } else {
         input.classList.remove('correct');
@@ -165,8 +205,15 @@ function submitInput(index) {
         setTimeout(() => input.classList.remove('shake'), 300);
         showDiff(index);
         
-        // Reset combo
-        resetCombo();
+        recordMistake();
+        resetComboUI();
+    }
+}
+
+function recordMistake() {
+    if (!madeMistakeOnCurrent) {
+        madeMistakeOnCurrent = true;
+        mistakes.push(currentVerb);
     }
 }
 
@@ -192,7 +239,6 @@ function showDiff(index) {
         } else if (op === 0) { // Equal
             html += `<span class="diff-correct">${text}</span>`;
         }
-        // ignore op === -1 (Delete / extra chars typed by user) - they will see what's missing
     });
     
     feedbackDiv.innerHTML = `Hint: ${html}`;
@@ -204,11 +250,11 @@ function checkAllCorrect() {
     if (allCorrect) {
         inputs.forEach(input => input.disabled = true);
         
-        // Increase combo
-        comboCount++;
-        document.getElementById('combo-counter').textContent = `🔥 ${comboCount} Combo`;
+        if (!madeMistakeOnCurrent) {
+            comboCount++;
+            document.getElementById('combo-counter').textContent = `🔥 ${comboCount} Combo`;
+        }
         
-        // Speech synthesis (read the words)
         speakWords([
             currentVerb.present,
             currentVerb.present_participle,
@@ -216,20 +262,20 @@ function checkAllCorrect() {
             currentVerb.past_participle
         ]);
         
-        // Auto next
+        currentQuestionIndex++;
         setTimeout(loadNextQuestion, 1200);
     }
 }
 
-function resetCombo() {
+function resetComboUI() {
     comboCount = 0;
     document.getElementById('combo-counter').textContent = `🔥 0 Combo`;
 }
 
 function skipQuestion() {
-    resetCombo();
+    recordMistake();
+    resetComboUI();
     
-    // Show answers
     inputs.forEach((input, index) => {
         const key = keys[index];
         input.value = currentVerb[key];
@@ -246,14 +292,13 @@ function skipQuestion() {
         currentVerb.past_participle
     ]);
     
-    // Auto next after delay
+    currentQuestionIndex++;
     setTimeout(loadNextQuestion, 2000);
 }
 
 function speakWords(words) {
     if (!window.speechSynthesis) return;
     
-    // Filter out undefined/null just in case
     const validWords = words.filter(w => w);
     if (validWords.length === 0) return;
 
@@ -263,4 +308,34 @@ function speakWords(words) {
     utterance.rate = 1.0;
     
     window.speechSynthesis.speak(utterance);
+}
+
+function showResult() {
+    showScreen('screen-result');
+    
+    const correctCount = activeQuestions.length - mistakes.length;
+    document.getElementById('score-correct').textContent = correctCount;
+    document.getElementById('score-total').textContent = activeQuestions.length;
+    
+    const mistakesContainer = document.getElementById('mistakes-container');
+    const mistakesList = document.getElementById('mistakes-list');
+    const retryBtn = document.getElementById('btn-retry-mistakes');
+    
+    if (mistakes.length > 0) {
+        mistakesContainer.style.display = 'block';
+        retryBtn.style.display = 'inline-block';
+        
+        mistakesList.innerHTML = '';
+        mistakes.forEach(verb => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <span class="jp">${verb.japanese}</span>
+                ${verb.present} - ${verb.present_participle} - ${verb.past} - ${verb.past_participle}
+            `;
+            mistakesList.appendChild(li);
+        });
+    } else {
+        mistakesContainer.style.display = 'none';
+        retryBtn.style.display = 'none';
+    }
 }

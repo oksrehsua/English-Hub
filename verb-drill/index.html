@@ -19,15 +19,32 @@
             </div>
         </header>
 
-        <div class="settings-panel">
-            <label for="csv-file-input" class="file-label">
-                <span class="icon">📁</span> CSVをインポート
-            </label>
-            <input type="file" id="csv-file-input" accept=".csv" />
-            <span id="file-name-display">verbs.csv (デフォルト)</span>
+        <div id="screen-setup" class="panel">
+            <div class="settings-panel">
+                <label for="csv-file-input" class="file-label">
+                    <span class="icon">📁</span> CSVをインポート
+                </label>
+                <input type="file" id="csv-file-input" accept=".csv" />
+                <span id="file-name-display">verbs.csv (デフォルト)</span>
+            </div>
+            
+            <div class="drill-card setup-card">
+                <h2 class="setup-title">ドリル設定</h2>
+                <p class="total-info">収録問題数: <span id="total-questions">--</span> 問</p>
+                
+                <div class="input-row">
+                    <label>出題数:</label>
+                    <input type="number" id="question-count" value="10" min="1">
+                </div>
+                
+                <button id="btn-start" class="btn-primary">ドリル開始！</button>
+            </div>
         </div>
 
-        <main class="drill-card">
+        <main id="screen-drill" class="drill-card" style="display: none;">
+            <div class="progress-info">
+                <span id="question-progress">問題 1 / 10</span>
+            </div>
             <h2 id="japanese-word" class="japanese-word">読み込み中...</h2>
             
             <div class="inputs-grid">
@@ -60,6 +77,21 @@
                 <button id="btn-skip">わからない (Skip)</button>
             </div>
         </main>
+
+        <div id="screen-result" class="drill-card result-card" style="display: none;">
+            <h2 class="result-title">結果発表 🎉</h2>
+            <div class="score-display">
+                <span id="score-correct">0</span> / <span id="score-total">0</span> 正解！
+            </div>
+            
+            <div id="mistakes-container" style="display: none;">
+                <h3 class="mistakes-title">間違えた問題</h3>
+                <ul id="mistakes-list" class="mistakes-list"></ul>
+                <button id="btn-retry-mistakes" class="btn-primary">間違えた問題だけ再挑戦</button>
+            </div>
+            
+            <button id="btn-back-home" class="btn-secondary">最初から設定する</button>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
