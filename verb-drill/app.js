@@ -8,16 +8,25 @@ let keys = ['present', 'present_participle', 'past', 'past_participle'];
 const dmp = new diff_match_patch();
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize inputs unconditionally so file import works even if default CSV fails
+    inputs = keys.map(key => document.getElementById(`input-${key}`));
+    setupEventListeners();
+
     // Load CSV
     Papa.parse('verbs.csv', {
         download: true,
         header: true,
         skipEmptyLines: true,
         complete: function(results) {
-            verbsData = results.data;
-            inputs = keys.map(key => document.getElementById(`input-${key}`));
-            setupEventListeners();
-            initGame();
+            if (results.data && results.data.length > 0) {
+                verbsData = results.data;
+                initGame();
+            } else {
+                document.getElementById('japanese-word').textContent = 'CSVをインポートしてください';
+            }
+        },
+        error: function() {
+            document.getElementById('japanese-word').textContent = 'CSVをインポートしてください';
         }
     });
 });
@@ -58,8 +67,37 @@ function setupEventListeners() {
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
+                // Add Shift-JIS encoding in case it's created by Japanese Excel
+                // If it's UTF-8, most browsers still handle it fine or fallback
+                // Actually, PapaParse might fail if encoding doesn't match perfectly, so let's stick to default (UTF-8) and check headers.
                 complete: function(results) {
-                    verbsData = results.data;
+                    if (!results.data || results.data.length === 0) {
+                        alert("エラー: CSVのデータが空か、正しく読み取れませんでした。");
+                        return;
+                    }
+                    
+                    // BOMを削除した上でチェックするための処理
+                    const firstRow = results.data[0];
+                    const headers = Object.keys(firstRow);
+                    const hasJapanese = headers.some(h => h.includes('japanese'));
+                    const hasPresent = headers.some(h => h.includes('present'));
+
+                    if (!hasJapanese || !hasPresent) {
+                        alert("エラー: CSVのヘッダーが正しくありません。\n1行目は japanese,present,present_participle,past,past_participle としてください。\n\n読み取ったヘッダー:\n" + headers.join(", "));
+                        return;
+                    }
+
+                    // BOMが含まれていた場合のために、キーをきれいにする
+                    const cleanedData = results.data.map(row => {
+                        const newRow = {};
+                        for (let key in row) {
+                            const cleanKey = key.replace(/^\uFEFF/, '').trim();
+                            newRow[cleanKey] = row[key];
+                        }
+                        return newRow;
+                    });
+
+                    verbsData = cleanedData;
                     resetCombo();
                     loadNextQuestion();
                 }
