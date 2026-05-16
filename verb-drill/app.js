@@ -3,7 +3,6 @@ let activeQuestions = [];
 let mistakes = [];
 let currentVerb = null;
 let currentQuestionIndex = 0;
-let comboCount = 0;
 let inputs = [];
 let keys = ['present', 'present_participle', 'past', 'past_participle'];
 let madeMistakeOnCurrent = false;
@@ -142,8 +141,6 @@ function showScreen(screenId) {
 function startDrill() {
     mistakes = [];
     currentQuestionIndex = 0;
-    comboCount = 0;
-    resetComboUI();
     showScreen('screen-drill');
     loadNextQuestion();
 }
@@ -206,7 +203,6 @@ function submitInput(index) {
         showDiff(index);
         
         recordMistake();
-        resetComboUI();
     }
 }
 
@@ -250,11 +246,6 @@ function checkAllCorrect() {
     if (allCorrect) {
         inputs.forEach(input => input.disabled = true);
         
-        if (!madeMistakeOnCurrent) {
-            comboCount++;
-            document.getElementById('combo-counter').textContent = `🔥 ${comboCount} Combo`;
-        }
-        
         speakWords([
             currentVerb.present,
             currentVerb.present_participle,
@@ -267,14 +258,8 @@ function checkAllCorrect() {
     }
 }
 
-function resetComboUI() {
-    comboCount = 0;
-    document.getElementById('combo-counter').textContent = `🔥 0 Combo`;
-}
-
 function skipQuestion() {
     recordMistake();
-    resetComboUI();
     
     inputs.forEach((input, index) => {
         const key = keys[index];

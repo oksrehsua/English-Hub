@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verb Conjugation Drill</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Outfit:wght@400;600;800&family=Yusei+Magic&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Outfit:wght@400;600;800&family=Yusei+Magic&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header>
             <a href="../index.html" class="back-link">← Hub</a>
             <h1>Verb Drill</h1>
-            <div class="stats">
-                <span id="combo-counter">🔥 0 Combo</span>
-            </div>
         </header>
 
         <div id="screen-setup" class="panel">
@@ -27,16 +28,16 @@
                 <input type="file" id="csv-file-input" accept=".csv" />
                 <span id="file-name-display">verbs.csv (デフォルト)</span>
             </div>
-            
+
             <div class="drill-card setup-card">
                 <h2 class="setup-title">ドリル設定</h2>
                 <p class="total-info">収録問題数: <span id="total-questions">--</span> 問</p>
-                
+
                 <div class="input-row">
                     <label>出題数:</label>
                     <input type="number" id="question-count" value="10" min="1">
                 </div>
-                
+
                 <button id="btn-start" class="btn-primary">ドリル開始！</button>
             </div>
         </div>
@@ -46,50 +47,50 @@
                 <span id="question-progress">問題 1 / 10</span>
             </div>
             <h2 id="japanese-word" class="japanese-word">読み込み中...</h2>
-            
+
             <div class="inputs-grid">
                 <div class="input-group">
-                    <label>Present (現在形)</label>
+                    <label>Present(現在形)</label>
                     <input type="text" id="input-present" autocomplete="off">
                     <div class="feedback" id="feedback-present"></div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label>Present Participle (-ing形)</label>
+                    <label>Present Participle(-ing形)</label>
                     <input type="text" id="input-present_participle" autocomplete="off">
                     <div class="feedback" id="feedback-present_participle"></div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label>Past (過去形)</label>
+                    <label>Past(過去形)</label>
                     <input type="text" id="input-past" autocomplete="off">
                     <div class="feedback" id="feedback-past"></div>
                 </div>
-                
+
                 <div class="input-group">
-                    <label>Past Participle (過去分詞)</label>
+                    <label>Past Participle(過去分詞)</label>
                     <input type="text" id="input-past_participle" autocomplete="off">
                     <div class="feedback" id="feedback-past_participle"></div>
                 </div>
             </div>
-            
+
             <div class="controls">
-                <button id="btn-skip">わからない (Skip)</button>
+                <button id="btn-skip">Skip</button>
             </div>
         </main>
 
         <div id="screen-result" class="drill-card result-card" style="display: none;">
-            <h2 class="result-title">結果発表 🎉</h2>
+            <h2 class="result-title">結果発表</h2>
             <div class="score-display">
                 <span id="score-correct">0</span> / <span id="score-total">0</span> 正解！
             </div>
-            
+
             <div id="mistakes-container" style="display: none;">
                 <h3 class="mistakes-title">間違えた問題</h3>
                 <ul id="mistakes-list" class="mistakes-list"></ul>
                 <button id="btn-retry-mistakes" class="btn-primary">間違えた問題だけ再挑戦</button>
             </div>
-            
+
             <button id="btn-back-home" class="btn-secondary">最初から設定する</button>
         </div>
     </div>
@@ -98,4 +99,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
     <script src="app.js"></script>
 </body>
+
 </html>
