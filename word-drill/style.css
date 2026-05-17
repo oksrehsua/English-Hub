@@ -40,7 +40,7 @@ body {
 
 .app-container {
     width: 100%;
-    max-width: 800px;
+    max-width: 1000px; /* Spacious, wide layout! */
     padding: 20px;
 }
 
@@ -128,7 +128,7 @@ h1 {
 }
 
 #screen-drill {
-    height: 640px;
+    height: 700px; /* Taller, extremely premium and spacious screen-filling height! */
     overflow-y: auto;
     scrollbar-gutter: stable;
 }
@@ -521,16 +521,50 @@ h1 {
     margin-top: 40px;
     padding: 32px;
     background: var(--gray4);
+    border: 1px dashed var(--border);
     border-radius: 24px;
     text-align: left;
+    height: 240px; /* Pre-allocated fixed height! */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centered placeholder initially */
+    align-items: center;
+    transition: all 0.3s ease-out;
+    position: relative;
+    overflow-y: auto; /* Fallback if content is exceptionally long */
+}
+
+.explanation-container.revealed {
+    border-style: solid;
+    border-color: var(--border);
+    background: var(--meisei3);
+    justify-content: flex-start; /* Flow from top when revealed */
+    align-items: stretch;
+}
+
+.explanation-placeholder {
+    color: var(--text-gray);
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.explanation-placeholder svg {
+    stroke: var(--text-gray);
+    opacity: 0.8;
 }
 
 .explanation-text {
     font-weight: 600;
     color: var(--text-gray);
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     font-size: 1rem;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .full-sentence-text {
@@ -538,12 +572,12 @@ h1 {
     font-weight: 600;
     color: var(--text-dark);
     font-size: 1.2rem;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
     background: var(--white);
-    padding: 20px;
+    padding: 16px 20px;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 .score-display {
@@ -649,7 +683,7 @@ h1 {
     }
     
     #screen-drill {
-        height: 520px;
+        height: 600px;
     }
     
     .settings-panel {
@@ -700,6 +734,6 @@ h1 {
     }
     
     #screen-drill {
-        height: 480px;
+        height: 540px;
     }
 }

@@ -467,7 +467,21 @@ function loadNextQuestion() {
         });
     });
     
-    document.getElementById('explanation-container').style.display = 'none';
+    const explContainer = document.getElementById('explanation-container');
+    if (explContainer) {
+        explContainer.classList.remove('revealed');
+    }
+    const placeholder = document.getElementById('explanation-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'flex';
+    }
+    const content = document.getElementById('explanation-content');
+    if (content) {
+        content.style.display = 'none';
+    }
+    
+    document.getElementById('btn-skip').style.display = 'inline-block';
+    document.getElementById('btn-next').style.display = 'none';
     document.getElementById('drill-controls').style.display = 'block';
     
     const playBtnsContainer = document.getElementById('play-buttons-container');
@@ -567,13 +581,25 @@ function skipQuestion() {
 }
 
 function showExplanation() {
-    document.getElementById('drill-controls').style.display = 'none';
     const explContainer = document.getElementById('explanation-container');
     const explText = document.getElementById('explanation-text');
     const fullSentText = document.getElementById('full-sentence-text');
     const playBtnsContainer = document.getElementById('play-buttons-container');
     
-    explContainer.style.display = 'block';
+    if (explContainer) {
+        explContainer.classList.add('revealed');
+    }
+    const placeholder = document.getElementById('explanation-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
+    const content = document.getElementById('explanation-content');
+    if (content) {
+        content.style.display = 'block';
+    }
+    
+    document.getElementById('btn-skip').style.display = 'none';
+    document.getElementById('btn-next').style.display = 'inline-block';
     
     if (currentWord.explanation) {
         explText.textContent = currentWord.explanation;

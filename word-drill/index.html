@@ -72,17 +72,21 @@
                 <!-- Dynamically generated inputs go here -->
             </div>
 
-            <div id="explanation-container" class="explanation-container" style="display: none;">
-                <p id="explanation-text" class="explanation-text"></p>
-                <p id="full-sentence-text" class="full-sentence-text"></p>
-                
-                <div id="play-buttons-container" style="display: flex; gap: 10px; margin-top: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: flex-start;"></div>
-
-                <button id="btn-next" class="btn-primary">Next</button>
+            <div id="explanation-container" class="explanation-container">
+                <div id="explanation-placeholder" class="explanation-placeholder">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                    <span>正解するとここに解説が表示されます</span>
+                </div>
+                <div id="explanation-content" style="display: none; width: 100%;">
+                    <p id="explanation-text" class="explanation-text"></p>
+                    <p id="full-sentence-text" class="full-sentence-text"></p>
+                    <div id="play-buttons-container" style="display: flex; gap: 10px; margin-top: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: flex-start;"></div>
+                </div>
             </div>
 
             <div class="controls" id="drill-controls">
                 <button id="btn-skip">Skip</button>
+                <button id="btn-next" class="btn-primary" style="display: none;">Next</button>
             </div>
         </main>
 
