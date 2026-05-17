@@ -128,7 +128,20 @@ h1 {
 }
 
 #screen-drill {
-    min-height: 640px;
+    height: 640px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+#screen-drill::-webkit-scrollbar {
+    width: 6px;
+}
+#screen-drill::-webkit-scrollbar-track {
+    background: transparent;
+}
+#screen-drill::-webkit-scrollbar-thumb {
+    background: var(--gray2);
+    border-radius: 4px;
 }
 
 .question-tags {
@@ -636,7 +649,7 @@ h1 {
     }
     
     #screen-drill {
-        min-height: 520px;
+        height: 520px;
     }
     
     .settings-panel {
@@ -687,6 +700,6 @@ h1 {
     }
     
     #screen-drill {
-        min-height: 480px;
+        height: 480px;
     }
 }
