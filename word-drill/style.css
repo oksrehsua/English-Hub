@@ -147,13 +147,29 @@ h1 {
 }
 
 .question-text {
-    font-weight: 700;
-    font-size: clamp(1.4rem, 4vw, 2rem);
     margin-bottom: 40px;
-    color: var(--text-dark);
-    line-height: 1.5;
-    word-break: keep-all;
     letter-spacing: 0.03em;
+}
+
+.question-text .eng-sentence {
+    font-family: 'Outfit', 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.6rem, 5vw, 2.2rem);
+    color: var(--text-dark);
+    line-height: 1.4;
+    margin-bottom: 12px;
+    word-break: normal;
+    overflow-wrap: break-word;
+}
+
+.question-text .jpn-sentence {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 500;
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    color: var(--text-gray);
+    line-height: 1.6;
+    word-break: normal;
+    overflow-wrap: break-word;
 }
 
 .inputs-grid {
@@ -623,8 +639,16 @@ h1 {
     }
     
     .question-text {
-        font-size: 1.4rem;
         margin-bottom: 32px;
+    }
+    
+    .question-text .eng-sentence {
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+    }
+    
+    .question-text .jpn-sentence {
+        font-size: 0.95rem;
     }
     
     .input-group input {

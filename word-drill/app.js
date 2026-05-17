@@ -327,7 +327,18 @@ function loadNextQuestion() {
     madeMistakeOnCurrent = false;
     isAnswerRevealed = false;
     
-    document.getElementById('question-text').textContent = currentWord.question_text;
+    const qText = currentWord.question_text || '';
+    const lastOpenParen = Math.max(qText.lastIndexOf('('), qText.lastIndexOf('（'));
+    if (lastOpenParen !== -1) {
+        const engText = qText.substring(0, lastOpenParen).trim();
+        const jpnText = qText.substring(lastOpenParen).trim();
+        document.getElementById('question-text').innerHTML = `
+            <div class="eng-sentence">${engText}</div>
+            <div class="jpn-sentence">${jpnText}</div>
+        `;
+    } else {
+        document.getElementById('question-text').textContent = qText;
+    }
     document.getElementById('question-progress').textContent = `問題 ${currentQuestionIndex + 1} / ${activeQuestions.length}`;
     
     const tagsDiv = document.getElementById('question-tags');
@@ -555,8 +566,21 @@ function showResult() {
         mistakesList.innerHTML = '';
         mistakes.forEach(word => {
             const li = document.createElement('li');
+            const qText = word.question_text || '';
+            const lastOpenParen = Math.max(qText.lastIndexOf('('), qText.lastIndexOf('（'));
+            let displayHtml = '';
+            if (lastOpenParen !== -1) {
+                const engText = qText.substring(0, lastOpenParen).trim();
+                const jpnText = qText.substring(lastOpenParen).trim();
+                displayHtml = `
+                    <span class="eng-sentence-small" style="font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--text-dark); display: block; margin-bottom: 4px; word-break: normal; overflow-wrap: break-word;">${engText}</span>
+                    <span class="jp" style="color: var(--text-gray); font-size: 0.9rem; display: block; margin-bottom: 8px; word-break: normal; overflow-wrap: break-word;">${jpnText}</span>
+                `;
+            } else {
+                displayHtml = `<span class="jp" style="word-break: normal; overflow-wrap: break-word;">${qText}</span>`;
+            }
             li.innerHTML = `
-                <span class="jp">${word.question_text}</span>
+                ${displayHtml}
                 <strong>${word.correct_answer}</strong>
                 <div class="mistake-expl">${word.explanation || ''}</div>
             `;
