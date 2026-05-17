@@ -4,26 +4,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verb Conjugation Drill</title>
+    <title>Verb Drill</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Outfit:wght@400;600;800&family=Yusei+Magic&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <div class="app-container">
         <header>
-            <a href="../index.html" class="back-link">← Hub</a>
+            <a href="../index.html" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Hub
+            </a>
             <h1>Verb Drill</h1>
         </header>
 
         <div id="screen-setup" class="panel">
             <div class="settings-panel">
                 <label for="csv-file-input" class="file-label">
-                    <span class="icon">📁</span> CSVをインポート
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>
+                    CSVをインポート
                 </label>
                 <input type="file" id="csv-file-input" accept=".csv" />
                 <span id="file-name-display">verbs.csv (デフォルト)</span>
@@ -50,25 +52,25 @@
 
             <div class="inputs-grid">
                 <div class="input-group">
-                    <label>Present(現在形)</label>
+                    <label>Present（現在形）</label>
                     <input type="text" id="input-present" autocomplete="off">
                     <div class="feedback" id="feedback-present"></div>
                 </div>
 
                 <div class="input-group">
-                    <label>Present Participle(-ing形)</label>
+                    <label>Present Participle（-ing形）</label>
                     <input type="text" id="input-present_participle" autocomplete="off">
                     <div class="feedback" id="feedback-present_participle"></div>
                 </div>
 
                 <div class="input-group">
-                    <label>Past(過去形)</label>
+                    <label>Past（過去形）</label>
                     <input type="text" id="input-past" autocomplete="off">
                     <div class="feedback" id="feedback-past"></div>
                 </div>
 
                 <div class="input-group">
-                    <label>Past Participle(過去分詞)</label>
+                    <label>Past Participle（過去分詞）</label>
                     <input type="text" id="input-past_participle" autocomplete="off">
                     <div class="feedback" id="feedback-past_participle"></div>
                 </div>

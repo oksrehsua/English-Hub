@@ -1,20 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>English Learning Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Yusei+Magic&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
     <style>
         :root {
-            --primary: #e95c8b;
-            --secondary: #6c5ce7;
-            --bg: #f8f9fa;
-            --text: #1a1a1a;
-            --card-bg: #ffffff;
-            --border: #000000;
+            --white: #ffffff;
+            --black: #222222;
+            --meisei: #7f3033;
+            --meisei2: #f9f3f3;
+            --meisei3: #faf5f5;
+            --gray: #666666;
+            --gray2: #aaaaaa;
+            --gray3: #e2e2e2;
+            --gray4: #fafafa;
+
+            --bg: var(--meisei2);
+            --card-bg: var(--white);
+            --text-dark: var(--black);
+            --text-gray: var(--gray);
+            --primary: var(--meisei);
+            --border: var(--gray3);
         }
 
         * {
@@ -24,17 +37,16 @@
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
             background-color: var(--bg);
-            color: var(--text);
+            color: var(--text-dark);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            background-image: radial-gradient(#dcdde1 1px, transparent 1px);
-            background-size: 32px 32px;
+            padding: 40px 20px;
+            line-height: 1.4;
         }
 
         .hub-container {
@@ -48,165 +60,190 @@
         }
 
         h1 {
-            font-family: "Yusei Magic", sans-serif;
-            font-size: clamp(3rem, 10vw, 5rem);
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(3rem, 8vw, 4.5rem);
+            font-weight: 800;
             color: var(--primary);
-            text-shadow: 3px 3px 0 var(--border), 6px 6px 0 var(--border);
-            line-height: 1.1;
-            margin-bottom: 15px;
+            letter-spacing: 0.02em;
+            margin-bottom: 12px;
         }
 
         .subtitle {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            color: #555;
-            letter-spacing: 0.1em;
+            color: var(--text-gray);
+            letter-spacing: 0.05em;
         }
 
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 40px;
-            margin-top: 40px;
+            gap: 32px;
+            margin-top: 20px;
         }
 
         .tool-card {
             background: var(--card-bg);
-            border: 4px solid var(--border);
+            border: 1px solid var(--border);
             border-radius: 32px;
-            padding: 48px 32px;
+            padding: 40px 24px;
             text-decoration: none;
-            color: var(--text);
-            box-shadow: 12px 12px 0 var(--border);
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--text-dark);
+            box-shadow: 0 4px 35px rgba(69, 27, 27, 0.04);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
-            overflow: hidden;
         }
 
         .tool-card:hover {
-            transform: translate(-4px, -4px);
-            box-shadow: 16px 16px 0 var(--border);
-        }
-
-        .tool-card:active {
-            transform: translate(4px, 4px);
-            box-shadow: 4px 4px 0 var(--border);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(69, 27, 27, 0.12);
+            border-color: var(--primary);
         }
 
         .tool-icon {
-            font-size: 4rem;
             margin-bottom: 24px;
-            display: block;
+            color: var(--text-gray);
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover .tool-icon {
+            color: var(--primary);
+            transform: scale(1.1);
         }
 
         .tool-title {
-            font-family: "Yusei Magic", sans-serif;
-            font-size: 2.2rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1.8rem;
             margin-bottom: 16px;
+            color: var(--text-dark);
+            transition: color 0.3s ease;
+        }
+
+        .tool-card:hover .tool-title {
+            color: var(--primary);
         }
 
         .tool-desc {
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             line-height: 1.6;
-            color: #444;
-            font-weight: 600;
+            color: var(--text-gray);
+            font-weight: 500;
         }
-
-        .tool-card.triple-echo .tool-title { color: var(--primary); }
-        .tool-card.english-reader .tool-title { color: var(--secondary); }
-        .tool-card.verb-drill .tool-title { color: #10b981; }
 
         .btn-enter {
             margin-top: 32px;
             padding: 12px 32px;
-            background: var(--border);
-            color: white;
-            border-radius: 50px;
-            font-weight: 800;
+            background: var(--white);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            border-radius: 9999px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            transition: all 0.2s;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            transition: all 0.3s ease;
         }
 
         .tool-card:hover .btn-enter {
             background: var(--primary);
-            transform: scale(1.05);
-        }
-
-        .tool-card.english-reader:hover .btn-enter {
-            background: var(--secondary);
-        }
-
-        .tool-card.verb-drill:hover .btn-enter {
-            background: #10b981;
+            color: var(--white);
         }
 
         footer {
             margin-top: 80px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #888;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--gray2);
         }
 
         @media (max-width: 600px) {
-            body { padding: 12px; overflow-x: hidden; }
-            h1 { font-size: 2.4rem; }
-            header { margin-bottom: 36px; }
+            body {
+                padding: 20px 12px;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            header {
+                margin-bottom: 40px;
+            }
+
             .cards-grid {
                 grid-template-columns: 1fr;
-                gap: 24px;
+                gap: 20px;
             }
+
             .tool-card {
-                padding: 28px 20px;
+                padding: 32px 20px;
                 border-radius: 24px;
-                box-shadow: 8px 8px 0 var(--border);
             }
-            .tool-title { font-size: 1.6rem; }
-            .tool-desc { font-size: 0.95rem; }
-            .btn-enter { padding: 10px 24px; font-size: 0.85rem; }
-            footer { margin-top: 48px; }
+
+            footer {
+                margin-top: 48px;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="hub-container">
         <header>
             <h1>English Hub</h1>
-            <p class="subtitle">英語学習をもっと楽しく、もっと効率的に。</p>
         </header>
 
         <div class="cards-grid">
             <a href="triple-echo/index.html" class="tool-card triple-echo">
-                <span class="tool-icon">🔊</span>
-                <h2 class="tool-title">TRIPLE ECHO</h2>
-                <p class="tool-desc">
-                    リスニング・瞬間英作文・スピード訓練。<br>
-                    徹底的なリピートで英語脳を作る。
-                </p>
-                <div class="btn-enter">START TRAINING</div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="tool-icon">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                </svg>
+                <h2 class="tool-title">Triple Echo</h2>
+
+                <div class="btn-enter">Start Training</div>
             </a>
 
             <a href="english-reader/index.html" class="tool-card english-reader">
-                <span class="tool-icon">📚</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="tool-icon">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
                 <h2 class="tool-title">English Reader</h2>
-                <p class="tool-desc">
-                    CSVから文章を読み込み、<br>
-                    自分のペースでリスニング練習。
-                </p>
-                <div class="btn-enter">START READING</div>
+
+                <div class="btn-enter">Start Reading</div>
+            </a>
+
+            <a href="word-drill/index.html" class="tool-card word-drill">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="tool-icon">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                </svg>
+                <h2 class="tool-title">Word Drill</h2>
+
+                <div class="btn-enter">Start Drill</div>
             </a>
 
             <a href="verb-drill/index.html" class="tool-card verb-drill">
-                <span class="tool-icon">🔥</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="tool-icon">
+                    <path
+                        d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
+                    </path>
+                </svg>
                 <h2 class="tool-title">Verb Drill</h2>
-                <p class="tool-desc">
-                    動詞の4活用をひたすら入力！<br>
-                    反射神経とスペルを鍛える特訓モード。
-                </p>
-                <div class="btn-enter">START DRILL</div>
+
+                <div class="btn-enter">Start Drill</div>
             </a>
         </div>
 
@@ -215,4 +252,5 @@
         </footer>
     </div>
 </body>
+
 </html>

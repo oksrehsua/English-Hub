@@ -1,12 +1,27 @@
 :root {
-    --bg-color: #0f172a;
-    --card-bg: rgba(30, 41, 59, 0.7);
-    --accent-color: #38bdf8;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --border-color: rgba(255, 255, 255, 0.1);
+    --white: #ffffff;
+    --black: #222222;
+    --meisei: #7f3033;
+    --meisei2: #f9f3f3;
+    --meisei3: #faf5f5;
+    --gray: #666666;
+    --gray2: #aaaaaa;
+    --gray3: #e2e2e2;
+    --gray4: #fafafa;
+
+    --bg-color: var(--meisei2);
+    --card-bg: var(--white);
+    --text-primary: var(--black);
+    --text-secondary: var(--gray);
+    --accent-color: var(--meisei);
+    --border-color: var(--gray3);
     --success-color: #10b981;
-    --active-row-bg: rgba(56, 189, 248, 0.15);
+    --active-row-bg: #fdf2f2;
+
+    --shadow: 0 4px 35px rgba(69, 27, 27, 0.08);
+    --radius-lg: 32px;
+    --radius-md: 20px;
+    --radius-sm: 12px;
 }
 
 * {
@@ -16,7 +31,7 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-primary);
     line-height: 1.6;
@@ -24,112 +39,135 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 2rem;
+    padding: 32px 20px;
 }
 
 .container {
     width: 100%;
     max-width: 900px;
     background: var(--card-bg);
-    backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
-    border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    box-shadow: var(--shadow);
 }
 
+/* ── Header ──────────────────────────── */
 header {
-    margin-bottom: 2rem;
-    text-align: center;
-    position: relative;
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
 }
 
 .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--text-secondary);
     text-decoration: none;
     font-size: 0.9rem;
     font-weight: 600;
-    transition: color 0.2s;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    transition: all 0.25s ease;
 }
 
 .back-link:hover {
     color: var(--accent-color);
+    border-color: var(--accent-color);
 }
 
 h1 {
-    font-size: 2.5rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(2rem, 5vw, 2.8rem);
     font-weight: 800;
-    background: linear-gradient(to right, #38bdf8, #818cf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.5rem;
+    color: var(--accent-color);
+    letter-spacing: 0.02em;
 }
 
+/* ── Controls Bar ────────────────────── */
 .controls-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem;
+    gap: 16px;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: rgba(15, 23, 42, 0.5);
-    border-radius: 16px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--gray4);
+    border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
 }
 
 .voice-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 #voice-select {
-    padding: 0.5rem;
-    border-radius: 10px;
-    background: rgba(15, 23, 42, 0.8);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--white);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: 600;
     max-width: 200px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+#voice-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(127, 48, 51, 0.1);
 }
 
 .speed-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 6px;
 }
 
 .label {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-right: 0.5rem;
+    letter-spacing: 0.08em;
+    margin-right: 4px;
 }
 
+/* ── Buttons ──────────────────────────── */
 button {
     cursor: pointer;
     border: none;
-    border-radius: 12px;
-    padding: 0.6rem 1.2rem;
+    border-radius: 9999px;
+    padding: 8px 18px;
     font-weight: 600;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    transition: all 0.2s ease;
     font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-speed {
-    background: transparent;
+    background: var(--white);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
+    padding: 6px 14px;
 }
 
 .btn-speed.active {
     background: var(--accent-color);
-    color: var(--bg-color);
+    color: var(--white);
     border-color: var(--accent-color);
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
 }
 
 .btn-speed:hover:not(.active) {
@@ -139,33 +177,41 @@ button {
 
 .global-actions {
     display: flex;
-    gap: 1rem;
+    gap: 8px;
 }
 
 .btn-primary {
     background: var(--accent-color);
-    color: var(--bg-color);
+    color: var(--white);
 }
 
-.btn-primary:hover {
-    filter: brightness(1.1);
+.btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(127, 48, 51, 0.2);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--white);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
 }
 
-.btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
+.btn-secondary:hover:not(:disabled) {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
 }
 
+/* ── File Upload ─────────────────────── */
 .file-input-wrapper {
-    margin-bottom: 2rem;
+    margin-bottom: 24px;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 input[type="file"] {
@@ -173,84 +219,85 @@ input[type="file"] {
 }
 
 .custom-file-upload {
-    display: inline-block;
-    padding: 0.8rem 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
     cursor: pointer;
-    background: linear-gradient(45deg, #4f46e5, #7c3aed);
-    color: white;
-    border-radius: 12px;
+    background: var(--white);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
     font-weight: 600;
-    transition: all 0.3s;
+    font-size: 0.9rem;
+    transition: all 0.25s ease;
 }
 
 .custom-file-upload:hover {
-    box-shadow: 0 10px 20px -10px #7c3aed;
-    transform: scale(1.02);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
 }
 
+/* ── Content List ────────────────────── */
 .content-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    max-height: 500px;
+    gap: 8px;
+    max-height: 520px;
     overflow-y: auto;
-    padding-right: 0.5rem;
+    padding-right: 4px;
 }
 
-/* Custom Scrollbar */
-.content-list::-webkit-scrollbar {
-    width: 6px;
-}
-.content-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-.content-list::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 10px;
-}
+.content-list::-webkit-scrollbar { width: 6px; }
+.content-list::-webkit-scrollbar-track { background: transparent; }
+.content-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
 
 .row-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.2rem 1.5rem;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 16px 20px;
+    background: var(--gray4);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
-    transition: all 0.3s;
+    border-radius: var(--radius-md);
+    transition: all 0.25s ease;
     cursor: pointer;
+    gap: 12px;
 }
 
 .row-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(56, 189, 248, 0.4);
+    background: var(--meisei3);
+    border-color: var(--accent-color);
     transform: translateY(-2px);
+    box-shadow: var(--shadow);
 }
 
 .row-item.playing {
     background: var(--active-row-bg);
     border-color: var(--accent-color);
-    transform: translateX(5px);
+    border-left: 3px solid var(--accent-color);
 }
 
 .row-content {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 4px;
 }
 
 .row-text {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--text-primary);
     font-weight: 600;
 }
 
 .row-translation {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: var(--text-secondary);
     font-weight: 400;
-    transition: all 0.3s;
+    transition: all 0.2s;
 }
 
 .row-translation.hidden {
@@ -260,179 +307,96 @@ input[type="file"] {
 .row-actions {
     flex-shrink: 0;
     display: flex;
-    gap: 0.5rem;
+    gap: 6px;
 }
 
 .btn-play-small {
-    background: rgba(56, 189, 248, 0.1);
+    background: var(--meisei3);
     color: var(--accent-color);
-    padding: 0.5rem 1rem;
-    border-radius: 10px;
-    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    border: 1px solid var(--border-color);
 }
 
 .btn-play-small:hover {
     background: var(--accent-color);
-    color: var(--bg-color);
+    color: var(--white);
+    border-color: var(--accent-color);
 }
 
 .btn-translate-small {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--white);
     color: var(--text-secondary);
-    padding: 0.5rem 0.8rem;
-    border-radius: 10px;
+    padding: 6px 12px;
+    border-radius: 9999px;
     font-size: 0.8rem;
     border: 1px solid var(--border-color);
 }
 
 .btn-translate-small:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
 }
 
 .empty-state {
     text-align: center;
-    padding: 3rem;
+    padding: 48px;
     color: var(--text-secondary);
+    font-weight: 600;
 }
 
-/* ── Mobile: iPhone SE ~ iPhone 14 Pro Max ── */
+/* ── Mobile ───────────────────────────── */
 @media (max-width: 640px) {
-    body {
-        padding: 0.75rem;
-        overflow-x: hidden;
-    }
+    body { padding: 12px; }
+    .container { padding: 20px; border-radius: 24px; }
+    h1 { font-size: 1.8rem; }
 
-    .container {
-        padding: 1.2rem;
-        border-radius: 16px;
-    }
-
-    h1 {
-        font-size: 1.8rem;
-    }
-
-    /* ── Controls Bar ── */
     .controls-bar {
         flex-direction: column;
         align-items: stretch;
-        gap: 1rem;
-        padding: 1rem;
+        gap: 12px;
+        padding: 14px;
     }
 
-    /* Voice row */
-    .voice-controls {
-        flex-wrap: wrap;
-        width: 100%;
-    }
+    .voice-controls { flex-wrap: wrap; width: 100%; }
 
     #voice-select {
         max-width: 100%;
         width: 100%;
         min-width: 0;
         font-size: 0.8rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
-    /* Speed row */
-    .speed-controls {
-        width: 100%;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-    }
+    .speed-controls { width: 100%; flex-wrap: wrap; }
+    .btn-speed { padding: 5px 12px; font-size: 0.78rem; }
 
-    .btn-speed {
-        padding: 0.5rem 0.85rem;
-        font-size: 0.8rem;
-        min-width: 0;
-    }
-
-    /* Global action buttons */
-    .global-actions {
-        width: 100%;
-        flex-wrap: wrap;
-    }
-
+    .global-actions { width: 100%; flex-wrap: wrap; }
     .global-actions .btn-primary,
     .global-actions .btn-secondary {
         flex: 1 1 0;
         min-width: 0;
-        padding: 0.6rem 0.5rem;
-        font-size: 0.8rem;
-        text-align: center;
-        white-space: nowrap;
+        padding: 8px 6px;
+        font-size: 0.78rem;
+        justify-content: center;
     }
 
-    /* File upload */
-    .custom-file-upload {
-        font-size: 0.9rem;
-        padding: 0.7rem 1.2rem;
-    }
-
-    /* Content list */
-    .content-list {
-        max-height: 60vh;
-    }
-
-    .row-item {
-        padding: 0.8rem 1rem;
-        border-radius: 12px;
-        gap: 0.5rem;
-    }
-
-    .row-text {
-        font-size: 0.95rem;
-    }
-
-    .row-translation {
-        font-size: 0.8rem;
-    }
-
-    .btn-play-small {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.75rem;
-    }
-
-    .empty-state {
-        padding: 2rem 1rem;
-        font-size: 0.9rem;
-    }
+    .custom-file-upload { font-size: 0.88rem; padding: 9px 18px; }
+    .content-list { max-height: 60vh; }
+    .row-item { padding: 12px 14px; border-radius: 16px; }
+    .row-text { font-size: 0.92rem; }
+    .row-translation { font-size: 0.78rem; }
+    .btn-play-small { padding: 5px 10px; font-size: 0.75rem; }
+    .empty-state { padding: 32px 12px; font-size: 0.9rem; }
 }
 
-/* ── Extra small: iPhone SE (375px) ── */
 @media (max-width: 400px) {
-    h1 {
-        font-size: 1.5rem;
-    }
-
-    .controls-bar {
-        padding: 0.75rem;
-        gap: 0.75rem;
-    }
-
-    .label {
-        font-size: 0.75rem;
-        margin-right: 0.25rem;
-    }
-
-    .btn-speed {
-        padding: 0.4rem 0.65rem;
-        font-size: 0.75rem;
-    }
-
+    h1 { font-size: 1.5rem; }
+    .controls-bar { padding: 10px; gap: 10px; }
+    .label { font-size: 0.72rem; margin-right: 2px; }
+    .btn-speed { padding: 4px 10px; font-size: 0.72rem; }
     .global-actions .btn-primary,
-    .global-actions .btn-secondary {
-        font-size: 0.75rem;
-        padding: 0.55rem 0.4rem;
-    }
-
-    .row-item {
-        padding: 0.7rem 0.75rem;
-    }
-
-    .row-text {
-        font-size: 0.85rem;
-    }
+    .global-actions .btn-secondary { font-size: 0.72rem; padding: 7px 4px; }
+    .row-item { padding: 10px 12px; }
+    .row-text { font-size: 0.84rem; }
 }

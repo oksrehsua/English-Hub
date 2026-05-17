@@ -8,21 +8,22 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 
 <body>
     <div class="container">
-        <header style="margin-bottom: 2rem; text-align: center; position: relative;">
-            <div style="text-align: left; margin-bottom: 1rem;">
-                <a href="../index.html" class="back-link">🏠 HOME に戻る</a>
-            </div>
-            <h1>English Reader Pro</h1>
-            <p style="color: var(--text-secondary);">CSVを読み込んで英語リスニング練習</p>
+        <header>
+            <a href="../index.html" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Hub
+            </a>
+            <h1>English Reader</h1>
         </header>
 
         <div class="file-input-wrapper">
             <label for="csv-upload" class="custom-file-upload">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>
                 CSVを読み込む
             </label>
             <input type="file" id="csv-upload" accept=".csv">

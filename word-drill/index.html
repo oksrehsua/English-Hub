@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Word Drill</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <a href="../index.html" class="back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> Hub
+            </a>
+            <h1>Word Drill</h1>
+        </header>
+
+        <div id="screen-setup" class="panel">
+            <div class="settings-panel">
+                <label for="csv-file-input" class="file-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg> CSVをインポート
+                </label>
+                <input type="file" id="csv-file-input" accept=".csv" />
+                <span id="file-name-display">英単語.csv (デフォルト)</span>
+            </div>
+
+            <div class="drill-card setup-card">
+                <h2 class="setup-title">ドリル設定</h2>
+                <p class="total-info">収録問題数: <span id="total-questions">--</span> 問</p>
+
+                <div class="unit-selection-container">
+                    <div class="unit-selection-header">
+                        <label>単元を選択してください:</label>
+                        <div class="unit-buttons">
+                            <button type="button" id="btn-select-all-units" class="btn-small">すべて選択</button>
+                            <button type="button" id="btn-deselect-all-units" class="btn-small">すべて外す</button>
+                        </div>
+                    </div>
+                    <div id="unit-checkboxes" class="checkbox-grid">
+                        <!-- Checkboxes will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <label>音声:</label>
+                    <select id="voice-select">
+                        <option value="random">ランダム (US)</option>
+                    </select>
+                </div>
+
+                <div class="input-row">
+                    <label>出題数:</label>
+                    <input type="number" id="question-count" value="10" min="1">
+                </div>
+
+                <button id="btn-start" class="btn-primary">ドリル開始！</button>
+            </div>
+        </div>
+
+        <main id="screen-drill" class="drill-card" style="display: none;">
+            <div class="progress-info">
+                <span id="question-progress">問題 1 / 10</span>
+            </div>
+            
+            <div id="question-tags" class="question-tags"></div>
+            <h2 id="question-text" class="question-text">読み込み中...</h2>
+
+            <div class="inputs-grid single-input">
+                <div class="input-group">
+                    <label>Answer</label>
+                    <input type="text" id="input-answer" autocomplete="off">
+                    <div class="feedback" id="feedback-answer"></div>
+                </div>
+            </div>
+
+            <div id="explanation-container" class="explanation-container" style="display: none;">
+                <p id="explanation-text" class="explanation-text"></p>
+                <p id="full-sentence-text" class="full-sentence-text"></p>
+                
+                <div id="play-buttons-container" style="display: flex; gap: 10px; margin-top: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: flex-start;"></div>
+
+                <button id="btn-next" class="btn-primary">Next</button>
+            </div>
+
+            <div class="controls" id="drill-controls">
+                <button id="btn-skip">Skip</button>
+            </div>
+        </main>
+
+        <div id="screen-result" class="drill-card result-card" style="display: none;">
+            <h2 class="result-title">結果発表</h2>
+            <div class="score-display">
+                <span id="score-correct">0</span> / <span id="score-total">0</span> 正解！
+            </div>
+
+            <div id="mistakes-container" style="display: none;">
+                <h3 class="mistakes-title">間違えた問題</h3>
+                <ul id="mistakes-list" class="mistakes-list"></ul>
+                <button id="btn-retry-mistakes" class="btn-primary">間違えた問題だけ再挑戦</button>
+            </div>
+
+            <button id="btn-back-home" class="btn-secondary">最初から設定する</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
