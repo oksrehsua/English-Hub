@@ -4,6 +4,7 @@ let mistakes = [];
 let currentWord = null;
 let currentQuestionIndex = 0;
 let inputAnswer;
+let answerInputs = [];
 let madeMistakeOnCurrent = false;
 let isAnswerRevealed = false;
 
@@ -270,28 +271,6 @@ function setupEventListeners() {
         loadNextQuestion();
     });
 
-    inputAnswer.addEventListener('input', () => {
-        if (isAnswerRevealed) return;
-        checkCurrentInput();
-    });
-
-    inputAnswer.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (isAnswerRevealed) {
-                document.getElementById('btn-next').click();
-            } else {
-                submitInput();
-            }
-        }
-    });
-    
-    inputAnswer.addEventListener('blur', () => {
-        if (isAnswerRevealed) return;
-        if (inputAnswer.value.trim() !== '' && !inputAnswer.classList.contains('correct')) {
-            showDiff();
-        }
-    });
 
     document.getElementById('btn-retry-mistakes').addEventListener('click', () => {
         activeQuestions = [...mistakes];
@@ -361,10 +340,132 @@ function loadNextQuestion() {
         tagsDiv.appendChild(span);
     }
     
-    inputAnswer.value = '';
-    inputAnswer.className = '';
-    inputAnswer.disabled = false;
-    document.getElementById('feedback-answer').innerHTML = '';
+    const container = document.getElementById('inputs-container');
+    container.innerHTML = '';
+
+    const blankCount = (qText.match(/\(\s*\)|（\s*）/g) || []).length;
+    const answer = currentWord.correct_answer || '';
+    const answerParts = answer.split('/').map(s => s.trim());
+    
+    let isMultiInput = false;
+    let targetAnswers = [answer];
+    
+    if (blankCount > 1 && answerParts.length === blankCount) {
+        isMultiInput = true;
+        targetAnswers = answerParts;
+    }
+    
+    if (isMultiInput) {
+        container.style.gridTemplateColumns = `repeat(${blankCount}, 1fr)`;
+        container.style.maxWidth = `${Math.min(blankCount * 220, 700)}px`;
+    } else {
+        container.style.gridTemplateColumns = '1fr';
+        container.style.maxWidth = '440px';
+    }
+    
+    answerInputs = [];
+    
+    targetAnswers.forEach((ansPart, idx) => {
+        const group = document.createElement('div');
+        group.className = 'input-group';
+        
+        const label = document.createElement('label');
+        label.textContent = isMultiInput ? `Word ${idx + 1}` : 'Answer';
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.id = isMultiInput ? `input-answer-${idx}` : 'input-answer';
+        
+        const feedback = document.createElement('div');
+        feedback.className = 'feedback';
+        feedback.id = isMultiInput ? `feedback-answer-${idx}` : 'feedback-answer';
+        
+        group.appendChild(label);
+        group.appendChild(input);
+        group.appendChild(feedback);
+        container.appendChild(group);
+        
+        answerInputs.push(input);
+    });
+    
+    inputAnswer = answerInputs[0];
+    
+    // Attach event listeners dynamically to each input
+    answerInputs.forEach((input, idx) => {
+        input.addEventListener('input', () => {
+            if (isAnswerRevealed) return;
+            
+            const val = input.value.trim().toLowerCase();
+            const expected = targetAnswers[idx].toLowerCase();
+            
+            if (val === expected) {
+                input.classList.add('correct');
+                input.classList.remove('error');
+                const feedbackId = isMultiInput ? `feedback-answer-${idx}` : 'feedback-answer';
+                document.getElementById(feedbackId).innerHTML = '';
+                
+                // Auto focus next input if there is one
+                if (idx + 1 < answerInputs.length) {
+                    answerInputs[idx + 1].focus();
+                }
+            } else {
+                input.classList.remove('correct');
+            }
+            
+            // Check if all inputs are correct
+            const allCorrect = answerInputs.every((inp, i) => inp.value.trim().toLowerCase() === targetAnswers[i].toLowerCase());
+            if (allCorrect) {
+                handleCorrect();
+            }
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (isAnswerRevealed) {
+                    document.getElementById('btn-next').click();
+                    return;
+                }
+                
+                const val = input.value.trim().toLowerCase();
+                const expected = targetAnswers[idx].toLowerCase();
+                
+                if (val === expected) {
+                    input.classList.add('correct');
+                    input.classList.remove('error');
+                    // Focus next
+                    if (idx + 1 < answerInputs.length) {
+                        answerInputs[idx + 1].focus();
+                    } else {
+                        // Check if all are correct
+                        const allCorrect = answerInputs.every((inp, i) => inp.value.trim().toLowerCase() === targetAnswers[i].toLowerCase());
+                        if (allCorrect) {
+                            handleCorrect();
+                        }
+                    }
+                } else {
+                    input.classList.add('error');
+                    input.classList.add('shake');
+                    setTimeout(() => input.classList.remove('shake'), 300);
+                    
+                    const feedbackId = isMultiInput ? `feedback-answer-${idx}` : 'feedback-answer';
+                    showDiffForInput(input, targetAnswers[idx], document.getElementById(feedbackId));
+                    recordMistake();
+                }
+            }
+        });
+        
+        input.addEventListener('blur', () => {
+            if (isAnswerRevealed) return;
+            const val = input.value.trim().toLowerCase();
+            const expected = targetAnswers[idx].toLowerCase();
+            if (val !== '' && val !== expected) {
+                const feedbackId = isMultiInput ? `feedback-answer-${idx}` : 'feedback-answer';
+                showDiffForInput(input, targetAnswers[idx], document.getElementById(feedbackId));
+            }
+        });
+    });
     
     document.getElementById('explanation-container').style.display = 'none';
     document.getElementById('drill-controls').style.display = 'block';
@@ -375,39 +476,6 @@ function loadNextQuestion() {
     inputAnswer.focus();
 }
 
-function checkCurrentInput() {
-    const answer = currentWord.correct_answer;
-    const values = answer.split('/').map(s => s.trim().toLowerCase());
-    const val = inputAnswer.value.trim().toLowerCase();
-    
-    if (values.includes(val)) {
-        inputAnswer.classList.add('correct');
-        inputAnswer.classList.remove('error');
-        document.getElementById('feedback-answer').innerHTML = '';
-        
-        handleCorrect();
-    } else {
-        inputAnswer.classList.remove('correct');
-    }
-}
-
-function submitInput() {
-    const answer = currentWord.correct_answer;
-    const values = answer.split('/').map(s => s.trim().toLowerCase());
-    const val = inputAnswer.value.trim().toLowerCase();
-    
-    if (values.includes(val)) {
-        handleCorrect();
-    } else {
-        inputAnswer.classList.add('error');
-        inputAnswer.classList.add('shake');
-        setTimeout(() => inputAnswer.classList.remove('shake'), 300);
-        showDiff();
-        
-        recordMistake();
-    }
-}
-
 function recordMistake() {
     if (!madeMistakeOnCurrent) {
         madeMistakeOnCurrent = true;
@@ -415,14 +483,11 @@ function recordMistake() {
     }
 }
 
-function showDiff() {
-    const answer = currentWord.correct_answer.split('/')[0].trim(); // Compare against first option
-    const value = inputAnswer.value.trim();
-    const feedbackDiv = document.getElementById('feedback-answer');
-    
+function showDiffForInput(input, expected, feedbackDiv) {
+    const value = input.value.trim();
     if (value === '') return;
     
-    const diffs = dmp.diff_main(value.toLowerCase(), answer.toLowerCase());
+    const diffs = dmp.diff_main(value.toLowerCase(), expected.toLowerCase());
     dmp.diff_cleanupSemantic(diffs);
     
     let html = '';
@@ -441,8 +506,11 @@ function showDiff() {
 }
 
 function handleCorrect() {
-    inputAnswer.classList.add('correct');
-    inputAnswer.disabled = true;
+    answerInputs.forEach(input => {
+        input.classList.add('correct');
+        input.classList.remove('error');
+        input.disabled = true;
+    });
     isAnswerRevealed = true;
     
     if (currentWord.full_sentence) {
@@ -453,7 +521,7 @@ function handleCorrect() {
     
     showExplanation();
     
-    // Auto-advance to next question after 1.5 seconds
+    // Auto-advance to next question after 1.0 seconds
     setTimeout(() => {
         currentQuestionIndex++;
         loadNextQuestion();
@@ -463,11 +531,30 @@ function handleCorrect() {
 function skipQuestion() {
     recordMistake();
     
-    inputAnswer.value = currentWord.correct_answer.split('/')[0].trim();
-    inputAnswer.classList.add('correct');
-    inputAnswer.classList.remove('error');
-    document.getElementById('feedback-answer').innerHTML = '';
-    inputAnswer.disabled = true;
+    const qText = currentWord.question_text || '';
+    const blankCount = (qText.match(/\(\s*\)|（\s*）/g) || []).length;
+    const answer = currentWord.correct_answer || '';
+    const answerParts = answer.split('/').map(s => s.trim());
+    
+    let isMultiInput = false;
+    let targetAnswers = [answer];
+    
+    if (blankCount > 1 && answerParts.length === blankCount) {
+        isMultiInput = true;
+        targetAnswers = answerParts;
+    }
+    
+    answerInputs.forEach((input, idx) => {
+        input.value = targetAnswers[idx];
+        input.classList.add('correct');
+        input.classList.remove('error');
+        input.disabled = true;
+        
+        const feedbackId = isMultiInput ? `feedback-answer-${idx}` : 'feedback-answer';
+        const fb = document.getElementById(feedbackId);
+        if (fb) fb.innerHTML = '';
+    });
+    
     isAnswerRevealed = true;
     
     if (currentWord.full_sentence) {

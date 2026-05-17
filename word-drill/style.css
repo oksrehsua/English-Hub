@@ -671,3 +671,10 @@ h1 {
         width: 100%;
     }
 }
+
+@media (max-width: 480px) {
+    .inputs-grid {
+        grid-template-columns: 1fr !important;
+        max-width: 100% !important;
+    }
+}
