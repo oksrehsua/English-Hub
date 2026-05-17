@@ -255,7 +255,7 @@ function setupEventListeners() {
         }
         
         let count = parseInt(document.getElementById('question-count').value, 10);
-        if (isNaN(count) || count < 1) count = 10;
+        if (isNaN(count) || count < 1) count = filteredData.length;
         if (count > filteredData.length) count = filteredData.length;
 
         let shuffled = [...filteredData].sort(() => 0.5 - Math.random());
@@ -441,6 +441,12 @@ function handleCorrect() {
     }
     
     showExplanation();
+    
+    // Auto-advance to next question after 1.5 seconds
+    setTimeout(() => {
+        currentQuestionIndex++;
+        loadNextQuestion();
+    }, 1000);
 }
 
 function skipQuestion() {
