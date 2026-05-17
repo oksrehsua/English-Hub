@@ -128,7 +128,7 @@ h1 {
 }
 
 #screen-drill {
-    height: 880px; /* Even taller, extremely spacious viewport-filling height! */
+    height: 900px; /* Even taller, extremely spacious viewport-filling height! */
     overflow: hidden; /* No scrollbars whatsoever */
 }
 
@@ -152,7 +152,7 @@ h1 {
 }
 
 .question-text {
-    margin-bottom: 40px;
+    margin-bottom: 28px;
     letter-spacing: 0.03em;
 }
 
@@ -253,7 +253,7 @@ h1 {
 }
 
 .controls {
-    margin-top: 40px;
+    margin-top: 24px;
 }
 
 #btn-skip {
@@ -506,7 +506,7 @@ h1 {
 }
 
 .explanation-container {
-    margin-top: 40px;
+    margin-top: 28px;
     padding: 32px;
     background: var(--gray4);
     border: 1px dashed var(--border);
