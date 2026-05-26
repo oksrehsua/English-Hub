@@ -865,7 +865,8 @@ function checkAnswer() {
 
     if (isCorrect) {
         correctCount++;
-        resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>`;
+        resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>
+            <div class="result-sentence">正解: ${answerSentenceHtml}</div>`;
         mistakes = mistakes.filter(m => m.id !== q.id);
     } else {
         const userDiffHtml = getSentenceDiffHtml(userAnswer, acceptedAnswers[0]);
