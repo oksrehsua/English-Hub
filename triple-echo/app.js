@@ -43,8 +43,16 @@ const appAreaOriginalHTML = `
     <div id="result-message" class="result-message"></div>
     <div id="explanation-area" class="explanation"></div>
     <button id="next-btn" onclick="nextQuestion()" style="display: none;">次の問題へ</button>
-    <div style="margin-top: 40px; border-top: 2px dashed #000; padding-top: 20px;">
+    <div style="margin-top: 40px; border-top: 2px dashed #000; padding-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
         <button onclick="resetToSetup()" class="secondary-btn">ファイル選択に戻る</button>
+        <button onclick="suspendQuiz()" class="suspend-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+            一時中断して保存
+        </button>
     </div>
 `;
 
@@ -57,6 +65,9 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('review-btn').textContent = `間違えた問題に再挑戦する (${mistakes.length}問)`;
         }
     }
+
+    // 中断データのチェック
+    checkSuspendData();
 
     const csvFileInput = document.getElementById('csv-file');
     const directoryInput = document.getElementById('directory-input');
@@ -292,7 +303,17 @@ function resetMistakes() {
     }
 }
 
-function resetToSetup() {
+function resetToSetup(force) {
+    // force=true のときは確認なしで戻る（中断保存後やクイズ完了後）
+    if (!force) {
+        const appArea = document.getElementById('app-area');
+        if (appArea && appArea.style.display !== 'none') {
+            if (!confirm('現在の進捗は保存されません。\n中断して保存する場合は「一時中断して保存」ボタンをご利用ください。\n\nファイル選択画面に戻りますか？')) {
+                return;
+            }
+        }
+    }
+
     stopAnyAudio();
     currentQuestions = [];
     const appArea = document.getElementById('app-area');
@@ -317,6 +338,9 @@ function resetToSetup() {
     } else {
         reviewArea.style.display = 'none';
     }
+
+    // 中断データの再チェック
+    checkSuspendData();
 }
 
 
@@ -927,6 +951,9 @@ function nextQuestion() {
     if (currentIndex < currentQuestions.length) {
         displayQuestion();
     } else {
+        // クイズ完了時、中断データを自動削除
+        localStorage.removeItem('triple_echo_suspend');
+
         const accuracy = Math.round((correctCount / currentQuestions.length) * 100) || 0;
         const rankData = getRankData(accuracy);
         const comment = rankData.comments[Math.floor(Math.random() * rankData.comments.length)];
@@ -950,7 +977,7 @@ function nextQuestion() {
                 </div>
                 <div class="result-footer">お疲れさまでした！</div>
                 
-                <button onclick="resetToSetup()" class="secondary-btn start-over-btn">最初に戻る</button>
+                <button onclick="resetToSetup(true)" class="secondary-btn start-over-btn">最初に戻る</button>
             </div>
         `;
         document.getElementById('app-area').innerHTML = resultHtml;
@@ -1349,7 +1376,106 @@ window.addEventListener('load', () => {
     setTimeout(initVoiceList, 1000); // 遅延してロードされる音声用
 });
 
+// ── 中断・再開機能 ─────────────────────────────
 
+const SUSPEND_KEY = 'triple_echo_suspend';
 
+function checkSuspendData() {
+    const resumeCard = document.getElementById('resume-card');
+    if (!resumeCard) return;
 
+    const raw = localStorage.getItem(SUSPEND_KEY);
+    if (!raw) {
+        resumeCard.style.display = 'none';
+        return;
+    }
 
+    try {
+        const data = JSON.parse(raw);
+        const detail = document.getElementById('resume-card-detail');
+        const savedDate = new Date(data.savedAt);
+        const dateStr = savedDate.toLocaleDateString('ja-JP') + ' ' + savedDate.toLocaleTimeString('ja-JP', { hour12: false });
+
+        let modeLabel = '';
+        if (data.isListeningMode) modeLabel = ' ｜ 再生モード';
+        if (data.isDictationMode) modeLabel = ' ｜ ディクテーション';
+
+        detail.textContent = `進捗: ${data.currentIndex + 1} / ${data.totalQuestions} 問目${modeLabel} ｜ 保存: ${dateStr}`;
+        resumeCard.style.display = 'block';
+    } catch (e) {
+        console.error('中断データの読み込みに失敗しました:', e);
+        localStorage.removeItem(SUSPEND_KEY);
+        resumeCard.style.display = 'none';
+    }
+}
+
+function suspendQuiz() {
+    stopAnyAudio();
+
+    const suspendData = {
+        currentQuestions: currentQuestions,
+        currentIndex: currentIndex,
+        correctCount: correctCount,
+        totalQuestions: currentQuestions.length,
+        isReviewMode: isReviewMode,
+        isListeningMode: isListeningMode,
+        isDictationMode: isDictationMode,
+        savedAt: new Date().toISOString()
+    };
+
+    try {
+        localStorage.setItem(SUSPEND_KEY, JSON.stringify(suspendData));
+    } catch (e) {
+        alert('中断データの保存に失敗しました。ブラウザのストレージ容量が不足している可能性があります。');
+        console.error('Suspend save error:', e);
+        return;
+    }
+
+    // force=true で確認なしでTOP画面に戻る
+    resetToSetup(true);
+}
+
+function resumeQuiz() {
+    initGlobalAudio();
+
+    const raw = localStorage.getItem(SUSPEND_KEY);
+    if (!raw) {
+        alert('中断データが見つかりませんでした。');
+        return;
+    }
+
+    try {
+        const data = JSON.parse(raw);
+
+        // グローバル状態を復元
+        currentQuestions = data.currentQuestions;
+        currentIndex = data.currentIndex;
+        correctCount = data.correctCount;
+        isReviewMode = data.isReviewMode || false;
+        isListeningMode = data.isListeningMode || false;
+        isDictationMode = data.isDictationMode || false;
+
+        // 画面を切り替え
+        document.getElementById('setup-area').style.display = 'none';
+        const appArea = document.getElementById('app-area');
+        appArea.innerHTML = appAreaOriginalHTML;
+        appArea.style.display = 'block';
+
+        // 中断データを削除（再開したので不要）
+        localStorage.removeItem(SUSPEND_KEY);
+
+        // 問題を表示
+        displayQuestion();
+    } catch (e) {
+        console.error('中断データの復元に失敗しました:', e);
+        alert('中断データの読み込みに失敗しました。データが破損している可能性があります。');
+        localStorage.removeItem(SUSPEND_KEY);
+        checkSuspendData();
+    }
+}
+
+function deleteSuspendData() {
+    if (!confirm('中断データを削除しますか？\nこの操作は取り消せません。')) return;
+    localStorage.removeItem(SUSPEND_KEY);
+    checkSuspendData();
+}

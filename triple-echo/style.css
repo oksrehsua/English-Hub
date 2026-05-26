@@ -491,6 +491,100 @@ button.is-playing {
     max-width: 100%;
 }
 
+/* ── Resume Card ─────────────────────── */
+.resume-card {
+    background: linear-gradient(135deg, #fffaf0, #fff5eb);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(240, 192, 64, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.resume-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--accent), #e8a020);
+    border-radius: 4px 0 0 4px;
+}
+
+.resume-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #92610a;
+    margin-bottom: 8px;
+}
+
+.resume-card-header svg {
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.resume-card-detail {
+    font-size: 0.88rem;
+    color: #8a6d3b;
+    font-weight: 600;
+    margin-bottom: 16px !important;
+    padding-left: 32px;
+}
+
+.resume-card-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-left: 32px;
+}
+
+.resume-btn {
+    background: linear-gradient(135deg, #e8a020, #d4911a);
+    color: #fff;
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 9999px;
+    box-shadow: 0 4px 14px rgba(232, 160, 32, 0.3);
+    margin-top: 0;
+}
+
+.resume-btn:hover {
+    background: linear-gradient(135deg, #d4911a, #c07e10);
+    box-shadow: 0 6px 20px rgba(232, 160, 32, 0.4);
+}
+
+.resume-delete-btn {
+    padding: 10px 20px;
+    font-size: 0.88rem;
+    margin-top: 0;
+}
+
+/* ── Suspend Button ──────────────────── */
+.suspend-btn {
+    background: linear-gradient(135deg, #f0c040, #e8a020);
+    color: #5a3e00;
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 9999px;
+    box-shadow: 0 3px 12px rgba(240, 192, 64, 0.25);
+    margin-top: 0;
+}
+
+.suspend-btn:hover {
+    background: linear-gradient(135deg, #e8a020, #d4911a);
+    box-shadow: 0 5px 18px rgba(240, 192, 64, 0.35);
+}
+
 /* ── Mobile ───────────────────────────── */
 @media (max-width: 600px) {
     body { padding: 12px; overflow-x: hidden; }
