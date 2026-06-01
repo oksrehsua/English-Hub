@@ -8,6 +8,10 @@ let answerInputs = [];
 let madeMistakeOnCurrent = false;
 let isAnswerRevealed = false;
 
+// ── 中断・再開用のキー ──
+const SUSPEND_KEY = 'word_drill_suspend';
+let progressFileHandle = null;
+
 // We assume diff_match_patch is loaded globally via CDN
 const dmp = new diff_match_patch();
 
@@ -81,9 +85,13 @@ if (window.speechSynthesis) {
     setTimeout(populateVoices, 100);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     inputAnswer = document.getElementById('input-answer');
     setupEventListeners();
+    
+    // 進捗データのロード
+    await loadProgressOnInit();
+    checkSuspendData();
 
     // Default CSV file path
     Papa.parse('../english-questions/TRIPLE-ECHO/中学生/英単語.csv', {
@@ -259,8 +267,13 @@ function setupEventListeners() {
         if (isNaN(count) || count < 1) count = filteredData.length;
         if (count > filteredData.length) count = filteredData.length;
 
-        let shuffled = [...filteredData].sort(() => 0.5 - Math.random());
-        activeQuestions = shuffled.slice(0, count);
+        const pData = ProgressManager.getData();
+        if (Object.keys(pData).length > 0) {
+            activeQuestions = weightedSample(filteredData, count, pData);
+        } else {
+            let shuffled = [...filteredData].sort(() => 0.5 - Math.random());
+            activeQuestions = shuffled.slice(0, count);
+        }
         
         startDrill();
     });
@@ -494,6 +507,10 @@ function recordMistake() {
     if (!madeMistakeOnCurrent) {
         madeMistakeOnCurrent = true;
         mistakes.push(currentWord);
+        if (currentWord.item_id) {
+            ProgressManager.update(currentWord.item_id, false);
+            logActivity();
+        }
     }
 }
 
@@ -526,6 +543,11 @@ function handleCorrect() {
         input.disabled = true;
     });
     isAnswerRevealed = true;
+    
+    if (!madeMistakeOnCurrent && currentWord.item_id) {
+        ProgressManager.update(currentWord.item_id, true);
+        logActivity();
+    }
     
     if (currentWord.full_sentence) {
         speakWords(currentWord.full_sentence, 1.0);
@@ -636,7 +658,7 @@ function speakWords(text, rate = 1.0) {
     if (!text) return;
 
     // stop any ongoing speech before starting a new one
-    window.speechSynthesis.cancel();
+    stopAnyAudio();
 
     let utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
@@ -667,6 +689,11 @@ function showResult() {
     const correctCount = activeQuestions.length - mistakes.length;
     document.getElementById('score-correct').textContent = correctCount;
     document.getElementById('score-total').textContent = activeQuestions.length;
+    
+    // 進捗CSVを自動保存（上書き）
+    if (ProgressManager.getFileHandle()) {
+        ProgressManager.saveToFile(true).catch(() => {});
+    }
     
     const mistakesContainer = document.getElementById('mistakes-container');
     const mistakesList = document.getElementById('mistakes-list');
@@ -703,4 +730,380 @@ function showResult() {
         mistakesContainer.style.display = 'none';
         retryBtn.style.display = 'none';
     }
+}
+
+// ── 音声停止 ──
+function stopAnyAudio() {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+// ── Hub連携 ──
+function logActivity() {
+    if (typeof logHubActivity === 'function') {
+        logHubActivity('word-drill');
+    }
+}
+
+// ── 進捗ロード＆初期化 ──
+async function loadProgressOnInit() {
+    const data = await ProgressManager.loadData();
+    updateDashboardButtonVisibility();
+    const count = Object.keys(data).length;
+    if (count > 0) {
+        const ind = document.getElementById('progress-loaded-indicator');
+        if (ind) {
+            ind.textContent = `進捗データを自動読み込み（${count}問分）`;
+            ind.style.display = 'block';
+        }
+    }
+}
+
+// ── 手動ファイル操作 ──
+function loadProgressFromFile() {
+    const input = document.getElementById('progress-csv-file');
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const text = ev.target.result.replace(/^\uFEFF/, '');
+                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                if (lines.length < 2) throw new Error("行数が不足");
+                
+                const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const idIdx = header.indexOf('item_id');
+                const totalIdx = header.indexOf('total_count');
+                const correctIdx = header.indexOf('correct_count');
+                const streakIdx = header.indexOf('streak');
+                const historyIdx = header.indexOf('history');
+                if (idIdx === -1 || totalIdx === -1) throw new Error("必須ヘッダー不足");
+                
+                let newData = {};
+                let loadedCount = 0;
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = parseProgressCSVLine(lines[i]);
+                    const id = cols[idIdx]?.trim();
+                    if (!id) continue;
+                    const total = parseInt(cols[totalIdx]) || 0;
+                    const correct = parseInt(cols[correctIdx]) || 0;
+                    const streak = parseInt(cols[streakIdx]) || 0;
+                    const history = (cols[historyIdx] || '').split(',').map(s => s.trim()).filter(s => s === 'o' || s === 'x');
+                    newData[id] = { totalCount: total, correctCount: correct, streak, history };
+                    loadedCount++;
+                }
+                ProgressManager.mergeData(newData);
+                
+                const ind = document.getElementById('progress-loaded-indicator');
+                if (ind) {
+                    ind.textContent = `進捗データ読み込み済み: ${loadedCount}問分`;
+                    ind.style.display = 'block';
+                }
+                updateDashboardButtonVisibility();
+            } catch (err) {
+                console.error(err);
+                alert("CSVの読み込みに失敗しました。");
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function parseProgressCSVLine(line) {
+    const cols = [];
+    let cur = '';
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        const next = line[i + 1];
+        if (c === '"' && inQ && next === '"') { cur += '"'; i++; }
+        else if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+        else { cur += c; }
+    }
+    cols.push(cur);
+    return cols;
+}
+
+async function exportProgressCSVManual() {
+    await ProgressManager.saveToFile(false, _showSaveToast);
+}
+
+function _showSaveToast() {
+    let toast = document.getElementById('save-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'save-toast';
+        toast.style.cssText = [
+            'position:fixed', 'bottom:24px', 'right:24px',
+            'background:#222', 'color:#fff', 'font-weight:700',
+            'padding:12px 20px', 'border-radius:12px',
+            'box-shadow:0 4px 16px rgba(0,0,0,.15)',
+            'font-size:0.9rem', 'z-index:9999',
+            'transition:opacity .4s ease'
+        ].join(';');
+        document.body.appendChild(toast);
+    }
+    toast.textContent = '進捗ファイルを上書き保存しました';
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
+
+async function clearProgressData() {
+    if (!confirm('過去の正解率・解答履歴をすべてクリアしますか？\nこの操作は取り消せません。')) return;
+    await ProgressManager.clearData();
+    const ind = document.getElementById('progress-loaded-indicator');
+    if (ind) {
+        ind.style.display = 'none';
+        ind.textContent = '';
+    }
+    updateDashboardButtonVisibility();
+}
+
+// ── 中断・再開機能 ──
+function checkSuspendData() {
+    const resumeCard = document.getElementById('resume-card');
+    if (!resumeCard) return;
+    const raw = localStorage.getItem(SUSPEND_KEY);
+    if (!raw) {
+        resumeCard.style.display = 'none';
+        return;
+    }
+    try {
+        const data = JSON.parse(raw);
+        const detail = document.getElementById('resume-card-detail');
+        const savedDate = new Date(data.savedAt);
+        const dateStr = savedDate.toLocaleDateString('ja-JP') + ' ' + savedDate.toLocaleTimeString('ja-JP', { hour12: false });
+        detail.innerHTML = `保存日時: ${dateStr}<br>進捗: ${data.currentIndex}問済み / 全${data.totalQuestions}問<br>正解: ${data.correctCount}問`;
+        resumeCard.style.display = 'block';
+    } catch (e) {
+        console.error(e);
+        localStorage.removeItem(SUSPEND_KEY);
+        resumeCard.style.display = 'none';
+    }
+}
+
+function suspendQuiz() {
+    stopAnyAudio();
+    const suspendData = {
+        activeQuestions: activeQuestions,
+        currentIndex: currentQuestionIndex,
+        correctCount: (activeQuestions.length - mistakes.length),
+        totalQuestions: activeQuestions.length,
+        mistakes: mistakes,
+        savedAt: new Date().toISOString()
+    };
+    try {
+        localStorage.setItem(SUSPEND_KEY, JSON.stringify(suspendData));
+    } catch (e) {
+        alert('保存に失敗しました。');
+        return;
+    }
+    if (ProgressManager.getFileHandle()) {
+        ProgressManager.saveToFile(true).catch(() => {});
+    }
+    showScreen('screen-setup');
+    checkSuspendData();
+}
+
+function resumeQuiz() {
+    const raw = localStorage.getItem(SUSPEND_KEY);
+    if (!raw) {
+        alert('中断データがありません。');
+        return;
+    }
+    try {
+        const data = JSON.parse(raw);
+        activeQuestions = data.activeQuestions;
+        currentQuestionIndex = data.currentIndex;
+        mistakes = data.mistakes || [];
+        
+        localStorage.removeItem(SUSPEND_KEY);
+        checkSuspendData();
+        
+        showScreen('screen-drill');
+        loadNextQuestion();
+    } catch (e) {
+        console.error(e);
+        alert('データの復元に失敗しました。');
+        localStorage.removeItem(SUSPEND_KEY);
+        checkSuspendData();
+    }
+}
+
+function deleteSuspendData() {
+    if (!confirm('中断データを削除しますか？')) return;
+    localStorage.removeItem(SUSPEND_KEY);
+    checkSuspendData();
+}
+
+// ── ダッシュボード機能 ──
+let masteryChartInstance = null;
+let accuracyChartInstance = null;
+
+function updateDashboardButtonVisibility() {
+    const btn = document.getElementById('dashboard-btn');
+    if (!btn) return;
+    const pData = ProgressManager.getData();
+    if (Object.keys(pData).length > 0) {
+        btn.style.display = 'inline-block';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function showDashboard() {
+    if (typeof Chart === 'undefined') {
+        alert('グラフを読み込み中です。');
+        return;
+    }
+    document.getElementById('dashboard-modal').style.display = 'flex';
+    
+    // 直近学習日 (HubCore から取得、なければTripleEchoなどを参照)
+    const lastDateEl = document.getElementById('last-learning-date');
+    const lastPlayedStr = localStorage.getItem('EnglishHubLastActivity_word-drill') || localStorage.getItem('TripleEchoLastPlayed');
+    if (lastPlayedStr) {
+        const d = new Date(lastPlayedStr);
+        lastDateEl.textContent = '直近の学習: ' + d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour12: false });
+    } else {
+        lastDateEl.textContent = '直近の学習: 記録なし';
+    }
+    
+    const pData = ProgressManager.getData();
+    let mastered = 0, learning = 0, struggling = 0;
+    Object.values(pData).forEach(p => {
+        if (p.streak >= 3) mastered++;
+        else if (p.streak < 0) struggling++;
+        else learning++;
+    });
+    
+    const masteryCtx = document.getElementById('mastery-chart').getContext('2d');
+    if (masteryChartInstance) masteryChartInstance.destroy();
+    masteryChartInstance = new Chart(masteryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['マスター済 (3連続正解)', '学習中 (0〜2回)', '苦手 (連続不正解)'],
+            datasets: [{
+                data: [mastered, learning, struggling],
+                backgroundColor: ['#34d399', '#fcd34d', '#f87171'],
+                borderWidth: 0
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                datalabels: {
+                    color: '#fff', font: { weight: 'bold', size: 14 },
+                    formatter: (value, ctx) => {
+                        const sum = ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b, 0);
+                        if (sum === 0 || value === 0) return null;
+                        return (value * 100 / sum).toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    });
+    
+    // 品詞別の正答率
+    const formatStats = {};
+    if (wordsData) {
+        wordsData.forEach(q => {
+            const fmt = q.part_of_speech || 'その他';
+            if (!formatStats[fmt]) formatStats[fmt] = { correct: 0, total: 0 };
+            const p = pData[q.item_id];
+            if (p && p.totalCount > 0) {
+                formatStats[fmt].correct += p.correctCount;
+                formatStats[fmt].total += p.totalCount;
+            }
+        });
+    }
+    
+    const labels = [];
+    const accuracies = [];
+    Object.entries(formatStats).forEach(([fmt, stats]) => {
+        if (stats.total > 0) {
+            labels.push(fmt);
+            accuracies.push(Math.round((stats.correct / stats.total) * 100));
+        }
+    });
+    
+    const accuracyCtx = document.getElementById('accuracy-chart').getContext('2d');
+    if (accuracyChartInstance) accuracyChartInstance.destroy();
+    accuracyChartInstance = new Chart(accuracyCtx, {
+        type: 'bar',
+        data: {
+            labels: labels.length > 0 ? labels : ['データなし'],
+            datasets: [{
+                label: '正解率 (%)',
+                data: accuracies.length > 0 ? accuracies : [0],
+                backgroundColor: '#60a5fa',
+                borderRadius: 4
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } },
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end', align: 'top', color: '#60a5fa',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: (value) => value + '%'
+                }
+            }
+        }
+    });
+}
+
+function closeDashboard() {
+    document.getElementById('dashboard-modal').style.display = 'none';
+}
+
+// ── 重み付きサンプリング（苦手優先） ──
+function weightedSample(questions, count, pData) {
+    const scored = questions.map(q => {
+        const id = q.item_id;
+        const p = id ? pData[id] : null;
+        let score = 10;
+        if (!p || p.totalCount === 0) {
+            score += 20;
+        } else {
+            const accuracy = p.correctCount / p.totalCount;
+            if (accuracy < 0.4) score += 40;
+            else if (accuracy < 0.6) score += 20;
+
+            if (p.streak <= -3) score += 30;
+            else if (p.streak <= -2) score += 20;
+
+            if (p.streak >= 5) score -= 50;
+            else if (p.streak >= 3) score -= 20;
+        }
+        return { q, score: Math.max(1, score) };
+    });
+
+    const result = [];
+    const pool = [...scored];
+    const needed = Math.min(count, questions.length);
+
+    for (let i = 0; i < needed; i++) {
+        const totalWeight = pool.reduce((sum, item) => sum + item.score, 0);
+        let rand = Math.random() * totalWeight;
+        let idx = 0;
+        for (idx = 0; idx < pool.length; idx++) {
+            rand -= pool[idx].score;
+            if (rand <= 0) break;
+        }
+        idx = Math.min(idx, pool.length - 1);
+        result.push(pool[idx].q);
+        pool.splice(idx, 1);
+    }
+    return result;
 }

@@ -10,6 +10,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <style>
         :root {
             --white: #ffffff;
@@ -187,6 +189,146 @@
                 margin-top: 48px;
             }
         }
+
+        /* ダッシュボード用スタイル */
+        .dashboard-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            text-align: left;
+        }
+
+        .dashboard-header {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 800px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .calendar-wrapper {
+            background: #111; /* Dark theme to match mockup */
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-title-left {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .calendar-title-right {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .calendar-nav button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .calendar-day-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .calendar-cell {
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #ddd;
+        }
+
+        .calendar-cell.has-record::after {
+            content: '✔️'; /* Checkmark emoji or SVG */
+            position: absolute;
+            font-size: 1.2rem;
+            color: #60a5fa; /* Blue color matching mockup */
+            z-index: 1;
+            /* Adjust positioning slightly if needed */
+        }
+        
+        /* Using a custom SVG checkmark over the number like the mockup */
+        .calendar-cell.has-record {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+            background-size: 28px;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .calendar-cell.selected {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .chart-wrapper {
+            background: var(--gray4);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-dark);
+        }
     </style>
 </head>
 
@@ -195,6 +337,40 @@
         <header>
             <h1>English Hub</h1>
         </header>
+
+        <!-- ダッシュボードセクション -->
+        <div class="dashboard-section">
+            <div class="dashboard-header">
+                📊 My Progress Dashboard
+            </div>
+            <div class="dashboard-grid">
+                <!-- カレンダー (学習記録) -->
+                <div class="calendar-wrapper">
+                    <div class="calendar-header">
+                        <div class="calendar-title-left">カレンダー</div>
+                        <div class="calendar-title-right" id="calendar-summary">学習記録: --日 / --日</div>
+                    </div>
+                    <div class="calendar-nav">
+                        <button id="cal-prev">&lt;</button>
+                        <div id="cal-month-label">2026年5月</div>
+                        <button id="cal-next">&gt;</button>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- JSで動的に描画 -->
+                    </div>
+                </div>
+                <!-- 選択範囲の詳細ダッシュボード -->
+                <div class="chart-wrapper" id="dashboard-details-panel">
+                    <div class="chart-title" id="details-title">今月の学習状況</div>
+                    <div id="details-stats" style="margin-bottom: 15px; font-size: 0.95rem; color: #555;">
+                        <!-- JSで統計テキストを表示 -->
+                    </div>
+                    <div style="position: relative; height: 180px; width: 100%;">
+                        <canvas id="hub-mastery-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="cards-grid">
             <a href="triple-echo/index.html" class="tool-card triple-echo">
@@ -251,6 +427,8 @@
             &copy; 2026 English Learning Hub. Advanced Repetition System.
         </footer>
     </div>
+    
+    <script src="hub-dashboard.js"></script>
 </body>
 
 </html>

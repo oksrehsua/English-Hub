@@ -4,8 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triple Echo - English Training</title>
+    <title>Triple Echo</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 
 <body>
@@ -51,9 +53,31 @@
             </div>
         </div>
 
+        <div style="margin-top: 15px;">
+            <p>1c. 進捗ファイルを設定（任意）:</p>
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: var(--text-gray); font-weight: 600;">
+                読み込んだファイルにそのまま上書き保存されます。苦手問題が優先出題されます。
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <button onclick="loadProgressFromFile()" class="secondary-btn"
+                    style="margin: 0; padding: 8px 16px; font-size: 0.9rem;">
+                    進捗ファイルを開く
+                </button>
+                <input type="file" id="progress-csv-file" accept=".csv" style="display: none;">
+                <button onclick="exportProgressCSVManual()" class="secondary-btn"
+                    style="margin: 0; padding: 8px 16px; font-size: 0.9rem;">保存</button>
+                <button onclick="clearProgressData()" class="secondary-btn"
+                    style="margin: 0; padding: 8px 16px; font-size: 0.9rem; color: var(--danger); border-color: #fca5a5;">クリア</button>
+                <button onclick="showDashboard()" id="dashboard-btn" class="secondary-btn"
+                    style="margin: 0; padding: 8px 16px; font-size: 0.9rem; background: var(--primary); color: white; display: none;">成績ダッシュボード</button>
+            </div>
+            <div id="progress-loaded-indicator"
+                style="display: none; margin-top: 10px; font-weight: 600; color: var(--success); font-size: 0.9rem;">
+            </div>
+        </div>
+
         <div id="loading-status" style="display: none; margin-top: 10px; font-weight: 900; color: var(--primary);">
         </div>
-        <div id="loaded-file-indicator" style="display: none;"></div>
 
         <p style="margin-top: 15px;">2. 難易度レベルを選択してください:</p>
         <select id="level-select">
@@ -178,7 +202,8 @@
 
         <button id="next-btn" onclick="nextQuestion()" style="display: none;">次の問題へ</button>
 
-        <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <div
+            style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <button onclick="resetToSetup()" class="secondary-btn">ファイル選択に戻る</button>
             <button onclick="suspendQuiz()" class="suspend-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -191,6 +216,37 @@
         </div>
     </div>
 
+    <!-- ダッシュボードモーダル -->
+    <div id="dashboard-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
+            <button onclick="closeDashboard()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; margin: 0; box-shadow: none;">&times;</button>
+            <h2 style="margin-top: 0; margin-bottom: 5px; color: var(--primary); text-align: center;">📊 学習ダッシュボード</h2>
+            <p id="last-learning-date" style="text-align: center; color: var(--text-gray); font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;"></p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+                <div style="background: var(--gray4); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                    <h3 style="text-align: center; margin-top: 0; font-size: 1rem; color: #333;">全体の習熟度</h3>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="mastery-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div style="background: var(--gray4); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                    <h3 style="text-align: center; margin-top: 0; font-size: 1rem; color: #333;">形式別の正答率</h3>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="accuracy-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 24px;">
+                <button onclick="closeDashboard()" class="secondary-btn" style="margin: 0; background: var(--gray4);">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../hub-core.js"></script>
+    <script src="../progress-manager.js"></script>
     <script src="app.js"></script>
 </body>
 

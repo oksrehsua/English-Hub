@@ -128,8 +128,7 @@ h1 {
 }
 
 #screen-drill {
-    height: 900px; /* Even taller, extremely spacious viewport-filling height! */
-    overflow: hidden; /* No scrollbars whatsoever */
+    min-height: 800px;
 }
 
 .question-tags {
@@ -671,7 +670,7 @@ h1 {
     }
     
     #screen-drill {
-        height: 820px;
+        min-height: 820px;
     }
     
     .settings-panel {
@@ -724,11 +723,55 @@ h1 {
     }
     
     #screen-drill {
-        height: 740px;
+        min-height: 740px;
     }
     
     .explanation-container {
         height: 280px;
         overflow: hidden;
     }
+}
+
+/* ── Resume Card ──────────────────────── */
+.resume-card {
+    background: #fffdf5;
+    border: 2px solid #e8a020;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(232, 160, 32, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+.resume-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 6px; height: 100%;
+    background: #e8a020;
+}
+.resume-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #92610a;
+    margin-bottom: 8px;
+}
+.resume-card-header svg {
+    color: #e8a020;
+    flex-shrink: 0;
+}
+.resume-card-detail {
+    font-size: 0.88rem;
+    color: #8a6d3b;
+    font-weight: 600;
+    margin-bottom: 16px !important;
+    padding-left: 32px;
+}
+.resume-card-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-left: 32px;
 }

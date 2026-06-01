@@ -9,6 +9,9 @@ let isDictationMode = false;
 let loadedFileName = '';
 let activePlayback = { type: null, rate: null, btn: null, timeoutId: null, currentCount: 0, text: '', autoNext: false, onRepeat: null };
 
+// ── 進捗トラッキング ────────────────────────────
+// ※ ProgressManager を通じて EnglishHubProgress から読み書きします
+
 let globalAudioCtx = null;
 let isAudioUnlocked = false;
 
@@ -31,12 +34,13 @@ function initGlobalAudio() {
 
 const appAreaOriginalHTML = `
     <div id="progress"></div>
-    <div class="badge-container" style="margin-bottom: 12px;">
+    <div class="badge-container" style="margin-bottom: 4px;">
         <span id="item-id-badge" class="badge item-id-badge"></span>
         <span id="format-badge" class="badge format-badge"></span>
         <span id="level-badge" class="badge level-badge"></span>
         <span id="unit-category-badge" class="badge unit-category-badge" style="display: none;"></span>
     </div>
+    <div id="progress-badge-area" class="badge-container" style="margin-bottom: 12px; min-height: 24px;"></div>
     <h3 id="question-text"></h3>
     <div id="input-area"></div>
     <button id="check-btn" onclick="checkAnswer()">解答する</button>
@@ -69,19 +73,29 @@ window.addEventListener('DOMContentLoaded', () => {
     // 中断データのチェック
     checkSuspendData();
 
+    // 進捗データを IndexedDB から自動読み込み
+    idbLoadProgress();
+
     const csvFileInput = document.getElementById('csv-file');
     const directoryInput = document.getElementById('directory-input');
+    const progressFileInput = document.getElementById('progress-csv-file');
 
     if (csvFileInput) {
         csvFileInput.addEventListener('change', (e) => {
             handleFileSelect(e.target.files);
-            e.target.value = ''; // 同じファイルを再度選択してもchangeイベントが走るようにリセット
+            e.target.value = '';
         });
     }
     if (directoryInput) {
         directoryInput.addEventListener('change', (e) => {
             handleFileSelect(e.target.files);
-            e.target.value = ''; // 同上
+            e.target.value = '';
+        });
+    }
+    if (progressFileInput) {
+        progressFileInput.addEventListener('change', (e) => {
+            loadProgressCSV(e.target.files[0]);
+            e.target.value = '';
         });
     }
 });
@@ -158,11 +172,8 @@ async function handleFileSelect(files) {
         const now = new Date();
         const timeStr = now.toLocaleTimeString('ja-JP', { hour12: false });
         loadedFileName = csvFiles.length === 1 ? csvFiles[0].name : `選択フォルダ (${csvFiles.length} 個のCSV)`;
-        if (indicator) {
-            indicator.textContent = `読み込み済み: ${loadedFileName}（${allQuestions.length}問） - 読み込み完了: ${timeStr}`;
-            indicator.style.display = 'block';
-        }
         updateFilters();
+        updateDashboardButtonVisibility();
     } else {
         alert('有効な問題データが見つかりませんでした。CSVの形式を確認してください。');
     }
@@ -321,13 +332,6 @@ function resetToSetup(force) {
     appArea.style.display = 'none';
     document.getElementById('setup-area').style.display = 'block';
 
-    if (loadedFileName) {
-        const indicator = document.getElementById('loaded-file-indicator');
-        if (indicator) {
-            indicator.textContent = `読み込み済み: ${loadedFileName}（${allQuestions.length}問）`;
-            indicator.style.display = 'block';
-        }
-    }
 
     const reviewArea = document.getElementById('review-area');
     const reviewBtn = document.getElementById('review-btn');
@@ -470,7 +474,7 @@ function startQuiz() {
 function startQuizWithQuestions(selectedLevel, selectedFormats, selectedCategories, filterTags) {
     const errorMsg = document.getElementById('setup-error');
 
-    currentQuestions = allQuestions.filter(q => {
+    let filtered = allQuestions.filter(q => {
         const levelMatch = selectedLevel === 'all' || q.level === selectedLevel;
         const formatMatch = selectedFormats.includes(q.format);
         const categoryMatch = selectedCategories.includes(q.category);
@@ -482,20 +486,25 @@ function startQuizWithQuestions(selectedLevel, selectedFormats, selectedCategori
         return levelMatch && formatMatch && categoryMatch && tagMatch;
     });
 
-    if (currentQuestions.length === 0) {
+    if (filtered.length === 0) {
         errorMsg.textContent = '該当する条件の問題がありません。';
         errorMsg.style.display = 'inline-block';
         return;
     }
 
-    shuffleArray(currentQuestions);
-
     const countInputVal = document.getElementById('count-input').value;
-    if (countInputVal.trim() !== '') {
-        const count = parseInt(countInputVal, 10);
-        if (!isNaN(count) && count > 0) {
-            currentQuestions = currentQuestions.slice(0, count);
-        }
+    const requestedCount = (countInputVal.trim() !== '' && !isNaN(parseInt(countInputVal, 10)) && parseInt(countInputVal, 10) > 0)
+        ? parseInt(countInputVal, 10)
+        : null;
+
+    // 進捗データがある場合は重み付き抽選、ない場合はシャッフル
+    const pData = ProgressManager.getData();
+    const hasProgress = Object.keys(pData).length > 0;
+    if (hasProgress) {
+        currentQuestions = weightedSample(filtered, requestedCount || filtered.length, pData);
+    } else {
+        shuffleArray(filtered);
+        currentQuestions = requestedCount ? filtered.slice(0, requestedCount) : filtered;
     }
 
     document.getElementById('setup-area').style.display = 'none';
@@ -509,6 +518,68 @@ function startQuizWithQuestions(selectedLevel, selectedFormats, selectedCategori
     displayQuestion();
 }
 
+// 重み付きサンプリング（苦手問題を優先）
+function weightedSample(questions, count, pData) {
+    const scored = questions.map(q => {
+        const p = pData[q.id];
+        let score = 10; // ベーススコア
+        if (!p || p.totalCount === 0) {
+            score += 20; // 未学習優先
+        } else {
+            const accuracy = p.correctCount / p.totalCount;
+            if (accuracy < 0.4) score += 40;
+            else if (accuracy < 0.6) score += 20;
+
+            if (p.streak <= -3) score += 30;
+            else if (p.streak <= -2) score += 20;
+
+            if (p.streak >= 5) score -= 50;
+            else if (p.streak >= 3) score -= 20;
+        }
+        return { q, score: Math.max(1, score) };
+    });
+
+    const result = [];
+    const pool = [...scored];
+    const needed = Math.min(count, questions.length);
+
+    for (let i = 0; i < needed; i++) {
+        const totalWeight = pool.reduce((sum, item) => sum + item.score, 0);
+        let rand = Math.random() * totalWeight;
+        let idx = 0;
+        for (idx = 0; idx < pool.length; idx++) {
+            rand -= pool[idx].score;
+            if (rand <= 0) break;
+        }
+        idx = Math.min(idx, pool.length - 1);
+        result.push(pool[idx].q);
+        pool.splice(idx, 1);
+    }
+    return result;
+}
+
+// 進捗バッジのHTMLを返す
+function getProgressBadgeHtml(itemId) {
+    const pData = ProgressManager.getData();
+    const p = pData[itemId];
+    if (!p || p.totalCount === 0) {
+        return '<span class="badge progress-badge progress-new">NEW</span>';
+    }
+    const accuracy = Math.round((p.correctCount / p.totalCount) * 100);
+    let streakHtml = '';
+    if (p.streak >= 5) {
+        streakHtml = `<span class="badge progress-badge progress-streak-good">${p.streak} streak</span>`;
+    } else if (p.streak >= 3) {
+        streakHtml = `<span class="badge progress-badge progress-streak-ok">${p.streak} streak</span>`;
+    } else if (p.streak <= -3) {
+        streakHtml = `<span class="badge progress-badge progress-streak-bad">${Math.abs(p.streak)}連続不正解</span>`;
+    } else if (p.streak <= -2) {
+        streakHtml = `<span class="badge progress-badge progress-streak-warn">${Math.abs(p.streak)}連続不正解</span>`;
+    }
+    const accuracyClass = accuracy >= 70 ? 'progress-accuracy-good' : accuracy >= 40 ? 'progress-accuracy-mid' : 'progress-accuracy-bad';
+    return `<span class="badge progress-badge ${accuracyClass}">${p.totalCount}回 · 正解${accuracy}%</span>${streakHtml}`;
+}
+
 function displayQuestion() {
     const q = currentQuestions[currentIndex];
 
@@ -520,6 +591,11 @@ function displayQuestion() {
     if (unitBadge) {
         unitBadge.textContent = q.category ? ('単元: ' + q.category) : '';
         unitBadge.style.display = q.category ? 'inline-block' : 'none';
+    }
+    // 進捗バッジ
+    const progressBadgeArea = document.getElementById('progress-badge-area');
+    if (progressBadgeArea) {
+        progressBadgeArea.innerHTML = getProgressBadgeHtml(q.id);
     }
 
     document.getElementById('result-message').textContent = '';
@@ -868,6 +944,7 @@ function checkAnswer() {
         resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>
             <div class="result-sentence">正解: ${answerSentenceHtml}</div>`;
         mistakes = mistakes.filter(m => m.id !== q.id);
+        updateProgress(q.id, true);
     } else {
         const userDiffHtml = getSentenceDiffHtml(userAnswer, acceptedAnswers[0]);
         resultMsg.innerHTML = `
@@ -879,6 +956,7 @@ function checkAnswer() {
             <div class="result-sentence">正解: ${answerSentenceHtml}</div>
         `;
         if (!mistakes.some(m => m.id === q.id)) mistakes.push(q);
+        updateProgress(q.id, false);
     }
 
     localStorage.setItem('english_quiz_mistakes', JSON.stringify(mistakes));
@@ -941,9 +1019,11 @@ function nextQuestion() {
         const laterCheck = document.getElementById('later-check');
         if (laterCheck && laterCheck.checked) {
             if (!mistakes.some(m => m.id === q.id)) mistakes.push(q);
+            updateProgress(q.id, false);
         } else {
             correctCount++;
             mistakes = mistakes.filter(m => m.id !== q.id);
+            updateProgress(q.id, true);
         }
         localStorage.setItem('english_quiz_mistakes', JSON.stringify(mistakes));
     }
@@ -958,6 +1038,20 @@ function nextQuestion() {
         const accuracy = Math.round((correctCount / currentQuestions.length) * 100) || 0;
         const rankData = getRankData(accuracy);
         const comment = rankData.comments[Math.floor(Math.random() * rankData.comments.length)];
+
+        // 進捗CSVを自動保存（上書き）
+        const pData = ProgressManager.getData();
+        const progressCount = Object.keys(pData).length;
+        let exportMsg = '';
+        if (progressCount > 0) {
+            // 非同期で保存（完了画面の描画をブロックしない）
+            saveProgressToFile(null, true).catch(() => {});
+            exportMsg = `
+                <div class="progress-export-msg">
+                    進捗データ（${progressCount}問分）を保存しました
+                    <button onclick="redownloadProgressCSV()" class="secondary-btn" style="margin-top: 8px; font-size: 0.85rem; padding: 6px 14px;">もう一度保存</button>
+                </div>`;
+        }
 
         const resultHtml = `
             <div class="result-screen">
@@ -977,7 +1071,7 @@ function nextQuestion() {
                     ${rankData.emoji} ${comment}
                 </div>
                 <div class="result-footer">お疲れさまでした！</div>
-                
+                ${exportMsg}
                 <button onclick="resetToSetup(true)" class="secondary-btn start-over-btn">最初に戻る</button>
             </div>
         `;
@@ -1377,6 +1471,207 @@ window.addEventListener('load', () => {
     setTimeout(initVoiceList, 1000); // 遅延してロードされる音声用
 });
 
+// ── 進捗トラッキング機能 (ProgressManager利用) ──────────────────────────
+
+async function idbLoadProgress() {
+    const data = await ProgressManager.loadData();
+    if (data && Object.keys(data).length > 0) {
+        const count = Object.keys(data).length;
+        const indicator = document.getElementById('progress-loaded-indicator');
+        if (indicator) {
+            indicator.textContent = `進捗データを自動読み込み（${count}問分）`;
+            indicator.style.display = 'block';
+        }
+        updateDashboardButtonVisibility();
+    }
+}
+
+async function idbClearProgress() {
+    await ProgressManager.clearData();
+}
+
+/**
+ * 解答後に ProgressManager を更新する
+ */
+function updateProgress(itemId, isCorrect) {
+    if (!itemId) return;
+    
+    ProgressManager.update(itemId, isCorrect);
+    
+    // 直近の学習日時を記録
+    localStorage.setItem('TripleEchoLastPlayed', new Date().toISOString());
+    
+    // Hub共通の活動ログに記録 (ヒートマップ用)
+    if (typeof logHubActivity === 'function') {
+        logHubActivity('triple-echo');
+    }
+}
+
+function buildProgressCSV() {
+    return ProgressManager.buildCSV();
+}
+
+async function saveProgressToFile(csvStr, silent = false) {
+    await ProgressManager.saveToFile(silent, _showSaveToast);
+}
+
+
+function _showSaveToast() {
+    let toast = document.getElementById('save-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'save-toast';
+        toast.style.cssText = [
+            'position:fixed', 'bottom:24px', 'right:24px',
+            'background:#222', 'color:#fff', 'font-weight:700',
+            'padding:12px 20px', 'border-radius:12px',
+            'box-shadow:0 4px 16px rgba(0,0,0,.15)',
+            'font-size:0.9rem', 'z-index:9999',
+            'transition:opacity .4s ease'
+        ].join(';');
+        document.body.appendChild(toast);
+    }
+    toast.textContent = '進捗ファイルを上書き保存しました';
+    toast.style.opacity = '1';
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
+
+/**
+ * 完了画面の「もう一度保存」ボタン用
+ */
+async function redownloadProgressCSV() {
+    await saveProgressToFile(null, false);
+}
+
+/**
+ * セットアップ画面の「今すぐ保存」ボタン用
+ */
+async function exportProgressCSVManual() {
+    const count = Object.keys(progressData).length;
+    if (count === 0) {
+        alert('保存する進捗データがまだありません。クイズを実行してください。');
+        return;
+    }
+    await saveProgressToFile(buildProgressCSV());
+}
+
+/**
+ * 進捗CSVファイルを読み込んで progressData に反映する
+ * File System Access API が使えるブラウザでは showOpenFilePicker を使い、
+ * そのファイルハンドルを以降の自動上書き保存先として流用する。
+ */
+async function loadProgressFromFile() {
+    // File System Access API 対応
+    if (window.showOpenFilePicker) {
+        try {
+            const [handle] = await window.showOpenFilePicker({
+                types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }],
+                multiple: false
+            });
+            const file = await handle.getFile();
+            // 読み込んだファイルを、以降の上書き保存先として流用
+            progressFileHandle = handle;
+            _parseProgressFile(file);
+        } catch (err) {
+            if (err.name !== 'AbortError') console.error('ファイル選択エラー:', err);
+        }
+    } else {
+        // フォールバック: <input type="file"> をプログラム的にクリック
+        document.getElementById('progress-csv-file').click();
+    }
+}
+
+function loadProgressCSV(file) {
+    if (!file) return;
+    _parseProgressFile(file);
+}
+
+function _parseProgressFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const text = e.target.result.replace(/^\uFEFF/, ''); // BOM除去
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            if (lines.length < 2) {
+                alert('進捗CSVの形式が正しくありません。');
+                return;
+            }
+            const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const idIdx = header.indexOf('item_id');
+            const totalIdx = header.indexOf('total_count');
+            const correctIdx = header.indexOf('correct_count');
+            const streakIdx = header.indexOf('streak');
+            const historyIdx = header.indexOf('history');
+
+            if (idIdx === -1 || totalIdx === -1) {
+                alert('進捗CSVに必要なヘッダー（item_id, total_count）が見つかりません。');
+                return;
+            }
+
+            let newData = {};
+            let loadedCount = 0;
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseProgressCSVLine(lines[i]);
+                const id = cols[idIdx]?.trim();
+                if (!id) continue;
+                const total = parseInt(cols[totalIdx]) || 0;
+                const correct = parseInt(cols[correctIdx]) || 0;
+                const streak = parseInt(cols[streakIdx]) || 0;
+                const historyRaw = cols[historyIdx] || '';
+                const history = historyRaw.split(',').map(s => s.trim()).filter(s => s === 'o' || s === 'x');
+                newData[id] = { totalCount: total, correctCount: correct, streak, history };
+                loadedCount++;
+            }
+            
+            ProgressManager.mergeData(newData);
+
+            const indicator = document.getElementById('progress-loaded-indicator');
+            if (indicator) {
+                indicator.textContent = `進捗データ読み込み済み: ${loadedCount}問分`;
+                indicator.style.display = 'block';
+            }
+            updateDashboardButtonVisibility();
+        } catch (err) {
+            console.error('進捗CSV読み込みエラー:', err);
+            alert('進捗CSVの読み込みに失敗しました。');
+        }
+    };
+    reader.readAsText(file);
+}
+
+/**
+ * 進捗CSV の1行をパース（historyフィールドがカンマ区切りでクォートされているので専用パース）
+ */
+function parseProgressCSVLine(line) {
+    const cols = [];
+    let cur = '';
+    let inQ = false;
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        const next = line[i + 1];
+        if (c === '"' && inQ && next === '"') { cur += '"'; i++; }
+        else if (c === '"') { inQ = !inQ; }
+        else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+        else { cur += c; }
+    }
+    cols.push(cur);
+    return cols;
+}
+
+/**
+ * progressData をクリアする
+ */
+async function clearProgressData() {
+    if (!confirm('過去の正解率・解答履歴をすべてクリアしますか？\nこの操作は取り消せません。')) return;
+    await idbClearProgress();
+    const indicator = document.getElementById('progress-loaded-indicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+        indicator.textContent = '';
+    }
+}
+
 // ── 中断・再開機能 ─────────────────────────────
 
 const SUSPEND_KEY = 'triple_echo_suspend';
@@ -1432,6 +1727,11 @@ function suspendQuiz() {
         return;
     }
 
+    // 中断時にも進捗CSVを上書き保存する（ハンドルがある場合のみ、サイレント保存）
+    if (ProgressManager.getFileHandle()) {
+        saveProgressToFile(null, true).catch(() => {});
+    }
+
     // force=true で確認なしでTOP画面に戻る
     resetToSetup(true);
 }
@@ -1479,4 +1779,152 @@ function deleteSuspendData() {
     if (!confirm('中断データを削除しますか？\nこの操作は取り消せません。')) return;
     localStorage.removeItem(SUSPEND_KEY);
     checkSuspendData();
+}
+
+// ── ダッシュボード（グラフ）機能 ────────────────────────
+
+let masteryChartInstance = null;
+let accuracyChartInstance = null;
+
+function updateDashboardButtonVisibility() {
+    const btn = document.getElementById('dashboard-btn');
+    if (!btn) return;
+    const pData = ProgressManager.getData();
+    if (Object.keys(pData).length > 0 && allQuestions.length > 0) {
+        btn.style.display = 'inline-block';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function closeDashboard() {
+    document.getElementById('dashboard-modal').style.display = 'none';
+}
+
+function showDashboard() {
+    if (typeof Chart === 'undefined') {
+        alert('グラフ描画ライブラリを読み込み中です。少々お待ちください。');
+        return;
+    }
+    
+    document.getElementById('dashboard-modal').style.display = 'flex';
+    
+    // 直近の学習日を表示
+    const lastDateEl = document.getElementById('last-learning-date');
+    const lastPlayedStr = localStorage.getItem('TripleEchoLastPlayed');
+    if (lastPlayedStr) {
+        const d = new Date(lastPlayedStr);
+        lastDateEl.textContent = '直近の学習: ' + d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour12: false });
+    } else {
+        lastDateEl.textContent = '直近の学習: 記録なし';
+    }
+    
+    // 1. 習熟度の計算
+    let mastered = 0;
+    let learning = 0;
+    let struggling = 0;
+    
+    const pData = ProgressManager.getData();
+    Object.values(pData).forEach(p => {
+        if (p.streak >= 3) {
+            mastered++;
+        } else if (p.streak < 0) {
+            struggling++;
+        } else {
+            learning++;
+        }
+    });
+    
+    const masteryCtx = document.getElementById('mastery-chart').getContext('2d');
+    if (masteryChartInstance) masteryChartInstance.destroy();
+    
+    masteryChartInstance = new Chart(masteryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['マスター済 (3連続正解以上)', '学習中 (0〜2回)', '苦手 (連続不正解)'],
+            datasets: [{
+                data: [mastered, learning, struggling],
+                backgroundColor: ['#34d399', '#fcd34d', '#f87171'],
+                borderWidth: 0
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 14 },
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => {
+                            sum += data;
+                        });
+                        if (sum === 0 || value === 0) return null;
+                        let percentage = (value * 100 / sum).toFixed(1) + '%';
+                        return percentage;
+                    }
+                }
+            }
+        }
+    });
+    
+    // 2. 形式別の正答率計算
+    const formatStats = {};
+    allQuestions.forEach(q => {
+        const fmt = q.format || 'その他';
+        if (!formatStats[fmt]) formatStats[fmt] = { correct: 0, total: 0 };
+        const p = pData[q.id];
+        if (p && p.totalCount > 0) {
+            formatStats[fmt].correct += p.correctCount;
+            formatStats[fmt].total += p.totalCount;
+        }
+    });
+    
+    const labels = [];
+    const accuracies = [];
+    
+    Object.entries(formatStats).forEach(([fmt, stats]) => {
+        if (stats.total > 0) {
+            labels.push(fmt);
+            accuracies.push(Math.round((stats.correct / stats.total) * 100));
+        }
+    });
+    
+    const accuracyCtx = document.getElementById('accuracy-chart').getContext('2d');
+    if (accuracyChartInstance) accuracyChartInstance.destroy();
+    
+    accuracyChartInstance = new Chart(accuracyCtx, {
+        type: 'bar',
+        data: {
+            labels: labels.length > 0 ? labels : ['データなし'],
+            datasets: [{
+                label: '正解率 (%)',
+                data: accuracies.length > 0 ? accuracies : [0],
+                backgroundColor: '#60a5fa',
+                borderRadius: 4
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 100 }
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    color: '#60a5fa',
+                    font: { weight: 'bold', size: 12 },
+                    formatter: (value) => value + '%'
+                }
+            }
+        }
+    });
 }
