@@ -558,26 +558,9 @@ function weightedSample(questions, count, pData) {
     return result;
 }
 
-// 進捗バッジのHTMLを返す
+// 進捗バッジのHTMLを返す（共通関数 ProgressManager.getProgressBadgeHtml を使用）
 function getProgressBadgeHtml(itemId) {
-    const pData = ProgressManager.getData();
-    const p = pData[itemId];
-    if (!p || p.totalCount === 0) {
-        return '<span class="badge progress-badge progress-new">NEW</span>';
-    }
-    const accuracy = Math.round((p.correctCount / p.totalCount) * 100);
-    let streakHtml = '';
-    if (p.streak >= 5) {
-        streakHtml = `<span class="badge progress-badge progress-streak-good">${p.streak} streak</span>`;
-    } else if (p.streak >= 3) {
-        streakHtml = `<span class="badge progress-badge progress-streak-ok">${p.streak} streak</span>`;
-    } else if (p.streak <= -3) {
-        streakHtml = `<span class="badge progress-badge progress-streak-bad">${Math.abs(p.streak)}連続不正解</span>`;
-    } else if (p.streak <= -2) {
-        streakHtml = `<span class="badge progress-badge progress-streak-warn">${Math.abs(p.streak)}連続不正解</span>`;
-    }
-    const accuracyClass = accuracy >= 70 ? 'progress-accuracy-good' : accuracy >= 40 ? 'progress-accuracy-mid' : 'progress-accuracy-bad';
-    return `<span class="badge progress-badge ${accuracyClass}">${p.totalCount}回 · 正解${accuracy}%</span>${streakHtml}`;
+    return ProgressManager.getProgressBadgeHtml(itemId);
 }
 
 function displayQuestion() {
@@ -1474,16 +1457,7 @@ window.addEventListener('load', () => {
 // ── 進捗トラッキング機能 (ProgressManager利用) ──────────────────────────
 
 async function idbLoadProgress() {
-    const data = await ProgressManager.loadData();
-    if (data && Object.keys(data).length > 0) {
-        const count = Object.keys(data).length;
-        const indicator = document.getElementById('progress-loaded-indicator');
-        if (indicator) {
-            indicator.textContent = `進捗データを自動読み込み（${count}問分）`;
-            indicator.style.display = 'block';
-        }
-        updateDashboardButtonVisibility();
-    }
+    await ProgressManager.initProgress('progress-loaded-indicator', () => updateDashboardButtonVisibility());
 }
 
 async function idbClearProgress() {
@@ -1495,16 +1469,9 @@ async function idbClearProgress() {
  */
 function updateProgress(itemId, isCorrect) {
     if (!itemId) return;
-    
     ProgressManager.update(itemId, isCorrect);
-    
-    // 直近の学習日時を記録
     localStorage.setItem('TripleEchoLastPlayed', new Date().toISOString());
-    
-    // Hub共通の活動ログに記録 (ヒートマップ用)
-    if (typeof logHubActivity === 'function') {
-        logHubActivity('triple-echo');
-    }
+    if (typeof logHubActivity === 'function') logHubActivity('triple-echo');
 }
 
 function buildProgressCSV() {
@@ -1512,43 +1479,17 @@ function buildProgressCSV() {
 }
 
 async function saveProgressToFile(csvStr, silent = false) {
-    await ProgressManager.saveToFile(silent, _showSaveToast);
+    await ProgressManager.saveToFile(silent, () => ProgressManager.showSaveToast());
 }
 
-
-function _showSaveToast() {
-    let toast = document.getElementById('save-toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'save-toast';
-        toast.style.cssText = [
-            'position:fixed', 'bottom:24px', 'right:24px',
-            'background:#222', 'color:#fff', 'font-weight:700',
-            'padding:12px 20px', 'border-radius:12px',
-            'box-shadow:0 4px 16px rgba(0,0,0,.15)',
-            'font-size:0.9rem', 'z-index:9999',
-            'transition:opacity .4s ease'
-        ].join(';');
-        document.body.appendChild(toast);
-    }
-    toast.textContent = '進捗ファイルを上書き保存しました';
-    toast.style.opacity = '1';
-    clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
-}
-
-/**
- * 完了画面の「もう一度保存」ボタン用
- */
+/** 完了画面の「もう一度保存」ボタン用 */
 async function redownloadProgressCSV() {
     await saveProgressToFile(null, false);
 }
 
-/**
- * セットアップ画面の「今すぐ保存」ボタン用
- */
+/** セットアップ画面の「今すぐ保存」ボタン用 */
 async function exportProgressCSVManual() {
-    const count = Object.keys(progressData).length;
+    const count = Object.keys(ProgressManager.getData()).length;
     if (count === 0) {
         alert('保存する進捗データがまだありません。クイズを実行してください。');
         return;
@@ -1556,76 +1497,17 @@ async function exportProgressCSVManual() {
     await saveProgressToFile(buildProgressCSV());
 }
 
-/**
- * 進捗CSVファイルを読み込んで progressData に反映する
- * File System Access API が使えるブラウザでは showOpenFilePicker を使い、
- * そのファイルハンドルを以降の自動上書き保存先として流用する。
- */
+/** 進捗CSVファイルを読み込む（共通処理） */
 async function loadProgressFromFile() {
-    // File System Access API 対応
-    if (window.showOpenFilePicker) {
-        try {
-            const [handle] = await window.showOpenFilePicker({
-                types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }],
-                multiple: false
-            });
-            const file = await handle.getFile();
-            // 読み込んだファイルを、以降の上書き保存先として流用
-            progressFileHandle = handle;
-            _parseProgressFile(file);
-        } catch (err) {
-            if (err.name !== 'AbortError') console.error('ファイル選択エラー:', err);
-        }
-    } else {
-        // フォールバック: <input type="file"> をプログラム的にクリック
-        document.getElementById('progress-csv-file').click();
-    }
+    await ProgressManager.loadProgressFromFile('progress-loaded-indicator', () => updateDashboardButtonVisibility());
 }
 
 function loadProgressCSV(file) {
     if (!file) return;
-    _parseProgressFile(file);
-}
-
-function _parseProgressFile(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            const text = e.target.result.replace(/^\uFEFF/, ''); // BOM除去
-            const lines = text.split(/\r?\n/).filter(l => l.trim());
-            if (lines.length < 2) {
-                alert('進捗CSVの形式が正しくありません。');
-                return;
-            }
-            const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-            const idIdx = header.indexOf('item_id');
-            const totalIdx = header.indexOf('total_count');
-            const correctIdx = header.indexOf('correct_count');
-            const streakIdx = header.indexOf('streak');
-            const historyIdx = header.indexOf('history');
-
-            if (idIdx === -1 || totalIdx === -1) {
-                alert('進捗CSVに必要なヘッダー（item_id, total_count）が見つかりません。');
-                return;
-            }
-
-            let newData = {};
-            let loadedCount = 0;
-            for (let i = 1; i < lines.length; i++) {
-                const cols = parseProgressCSVLine(lines[i]);
-                const id = cols[idIdx]?.trim();
-                if (!id) continue;
-                const total = parseInt(cols[totalIdx]) || 0;
-                const correct = parseInt(cols[correctIdx]) || 0;
-                const streak = parseInt(cols[streakIdx]) || 0;
-                const historyRaw = cols[historyIdx] || '';
-                const history = historyRaw.split(',').map(s => s.trim()).filter(s => s === 'o' || s === 'x');
-                newData[id] = { totalCount: total, correctCount: correct, streak, history };
-                loadedCount++;
-            }
-            
-            ProgressManager.mergeData(newData);
-
+            const { loadedCount } = ProgressManager.parseAndMergeCSV(e.target.result);
             const indicator = document.getElementById('progress-loaded-indicator');
             if (indicator) {
                 indicator.textContent = `進捗データ読み込み済み: ${loadedCount}問分`;
@@ -1640,36 +1522,9 @@ function _parseProgressFile(file) {
     reader.readAsText(file);
 }
 
-/**
- * 進捗CSV の1行をパース（historyフィールドがカンマ区切りでクォートされているので専用パース）
- */
-function parseProgressCSVLine(line) {
-    const cols = [];
-    let cur = '';
-    let inQ = false;
-    for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        const next = line[i + 1];
-        if (c === '"' && inQ && next === '"') { cur += '"'; i++; }
-        else if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
-        else { cur += c; }
-    }
-    cols.push(cur);
-    return cols;
-}
-
-/**
- * progressData をクリアする
- */
+/** progressData をクリアする */
 async function clearProgressData() {
-    if (!confirm('過去の正解率・解答履歴をすべてクリアしますか？\nこの操作は取り消せません。')) return;
-    await idbClearProgress();
-    const indicator = document.getElementById('progress-loaded-indicator');
-    if (indicator) {
-        indicator.style.display = 'none';
-        indicator.textContent = '';
-    }
+    await ProgressManager.clearProgressData('progress-loaded-indicator');
 }
 
 // ── 中断・再開機能 ─────────────────────────────

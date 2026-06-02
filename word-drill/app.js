@@ -269,7 +269,7 @@ function setupEventListeners() {
 
         const pData = ProgressManager.getData();
         if (Object.keys(pData).length > 0) {
-            activeQuestions = weightedSample(filteredData, count, pData);
+            activeQuestions = ProgressManager.weightedSample(filteredData, count, pData, 'item_id');
         } else {
             let shuffled = [...filteredData].sort(() => 0.5 - Math.random());
             activeQuestions = shuffled.slice(0, count);
@@ -351,6 +351,12 @@ function loadNextQuestion() {
         span.className = 'tag unit-tag';
         span.textContent = currentWord.unit_category;
         tagsDiv.appendChild(span);
+    }
+
+    // 進捗バッジ（共通関数）
+    const progressBadgeArea = document.getElementById('progress-badge-area');
+    if (progressBadgeArea && currentWord.item_id) {
+        progressBadgeArea.innerHTML = ProgressManager.getProgressBadgeHtml(currentWord.item_id);
     }
     
     const container = document.getElementById('inputs-container');
@@ -748,120 +754,20 @@ function logActivity() {
 
 // ── 進捗ロード＆初期化 ──
 async function loadProgressOnInit() {
-    const data = await ProgressManager.loadData();
-    updateDashboardButtonVisibility();
-    const count = Object.keys(data).length;
-    if (count > 0) {
-        const ind = document.getElementById('progress-loaded-indicator');
-        if (ind) {
-            ind.textContent = `進捗データを自動読み込み（${count}問分）`;
-            ind.style.display = 'block';
-        }
-    }
+    await ProgressManager.initProgress('progress-loaded-indicator', () => updateDashboardButtonVisibility());
 }
 
 // ── 手動ファイル操作 ──
 function loadProgressFromFile() {
-    const input = document.getElementById('progress-csv-file');
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            try {
-                const text = ev.target.result.replace(/^\uFEFF/, '');
-                const lines = text.split(/\r?\n/).filter(l => l.trim());
-                if (lines.length < 2) throw new Error("行数が不足");
-                
-                const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-                const idIdx = header.indexOf('item_id');
-                const totalIdx = header.indexOf('total_count');
-                const correctIdx = header.indexOf('correct_count');
-                const streakIdx = header.indexOf('streak');
-                const historyIdx = header.indexOf('history');
-                if (idIdx === -1 || totalIdx === -1) throw new Error("必須ヘッダー不足");
-                
-                let newData = {};
-                let loadedCount = 0;
-                for (let i = 1; i < lines.length; i++) {
-                    const cols = parseProgressCSVLine(lines[i]);
-                    const id = cols[idIdx]?.trim();
-                    if (!id) continue;
-                    const total = parseInt(cols[totalIdx]) || 0;
-                    const correct = parseInt(cols[correctIdx]) || 0;
-                    const streak = parseInt(cols[streakIdx]) || 0;
-                    const history = (cols[historyIdx] || '').split(',').map(s => s.trim()).filter(s => s === 'o' || s === 'x');
-                    newData[id] = { totalCount: total, correctCount: correct, streak, history };
-                    loadedCount++;
-                }
-                ProgressManager.mergeData(newData);
-                
-                const ind = document.getElementById('progress-loaded-indicator');
-                if (ind) {
-                    ind.textContent = `進捗データ読み込み済み: ${loadedCount}問分`;
-                    ind.style.display = 'block';
-                }
-                updateDashboardButtonVisibility();
-            } catch (err) {
-                console.error(err);
-                alert("CSVの読み込みに失敗しました。");
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
-function parseProgressCSVLine(line) {
-    const cols = [];
-    let cur = '';
-    let inQ = false;
-    for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        const next = line[i + 1];
-        if (c === '"' && inQ && next === '"') { cur += '"'; i++; }
-        else if (c === '"') { inQ = !inQ; }
-        else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
-        else { cur += c; }
-    }
-    cols.push(cur);
-    return cols;
+    ProgressManager.loadProgressFromFile('progress-loaded-indicator', () => updateDashboardButtonVisibility());
 }
 
 async function exportProgressCSVManual() {
-    await ProgressManager.saveToFile(false, _showSaveToast);
-}
-
-function _showSaveToast() {
-    let toast = document.getElementById('save-toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'save-toast';
-        toast.style.cssText = [
-            'position:fixed', 'bottom:24px', 'right:24px',
-            'background:#222', 'color:#fff', 'font-weight:700',
-            'padding:12px 20px', 'border-radius:12px',
-            'box-shadow:0 4px 16px rgba(0,0,0,.15)',
-            'font-size:0.9rem', 'z-index:9999',
-            'transition:opacity .4s ease'
-        ].join(';');
-        document.body.appendChild(toast);
-    }
-    toast.textContent = '進捗ファイルを上書き保存しました';
-    toast.style.opacity = '1';
-    clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+    await ProgressManager.saveToFile(false, () => ProgressManager.showSaveToast());
 }
 
 async function clearProgressData() {
-    if (!confirm('過去の正解率・解答履歴をすべてクリアしますか？\nこの操作は取り消せません。')) return;
-    await ProgressManager.clearData();
-    const ind = document.getElementById('progress-loaded-indicator');
-    if (ind) {
-        ind.style.display = 'none';
-        ind.textContent = '';
-    }
-    updateDashboardButtonVisibility();
+    await ProgressManager.clearProgressData('progress-loaded-indicator', () => updateDashboardButtonVisibility());
 }
 
 // ── 中断・再開機能 ──
@@ -1068,42 +974,4 @@ function closeDashboard() {
 }
 
 // ── 重み付きサンプリング（苦手優先） ──
-function weightedSample(questions, count, pData) {
-    const scored = questions.map(q => {
-        const id = q.item_id;
-        const p = id ? pData[id] : null;
-        let score = 10;
-        if (!p || p.totalCount === 0) {
-            score += 20;
-        } else {
-            const accuracy = p.correctCount / p.totalCount;
-            if (accuracy < 0.4) score += 40;
-            else if (accuracy < 0.6) score += 20;
-
-            if (p.streak <= -3) score += 30;
-            else if (p.streak <= -2) score += 20;
-
-            if (p.streak >= 5) score -= 50;
-            else if (p.streak >= 3) score -= 20;
-        }
-        return { q, score: Math.max(1, score) };
-    });
-
-    const result = [];
-    const pool = [...scored];
-    const needed = Math.min(count, questions.length);
-
-    for (let i = 0; i < needed; i++) {
-        const totalWeight = pool.reduce((sum, item) => sum + item.score, 0);
-        let rand = Math.random() * totalWeight;
-        let idx = 0;
-        for (idx = 0; idx < pool.length; idx++) {
-            rand -= pool[idx].score;
-            if (rand <= 0) break;
-        }
-        idx = Math.min(idx, pool.length - 1);
-        result.push(pool[idx].q);
-        pool.splice(idx, 1);
-    }
-    return result;
-}
+// weightedSample は ProgressManager.weightedSample(q, n, pData, 'item_id') を使用

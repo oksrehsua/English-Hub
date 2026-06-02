@@ -7,6 +7,9 @@ let inputs = [];
 let keys = ['present', 'present_participle', 'past', 'past_participle'];
 let madeMistakeOnCurrent = false;
 
+// progress-manager.js が読み込み済みかチェック
+const _hasProgressManager = () => typeof ProgressManager !== 'undefined';
+
 // We assume diff_match_patch is loaded globally via CDN
 const dmp = new diff_match_patch();
 
@@ -14,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize inputs unconditionally so file import works even if default CSV fails
     inputs = keys.map(key => document.getElementById(`input-${key}`));
     setupEventListeners();
+
+    // 進捗データ読み込み
+    if (_hasProgressManager()) {
+        ProgressManager.loadData();
+    }
 
     // Load Default CSV
     Papa.parse('verbs.csv', {
@@ -156,6 +164,12 @@ function loadNextQuestion() {
     
     document.getElementById('japanese-word').textContent = currentVerb.japanese;
     document.getElementById('question-progress').textContent = `問題 ${currentQuestionIndex + 1} / ${activeQuestions.length}`;
+
+    // 進捗バッジ（共通関数）
+    const badgeArea = document.getElementById('progress-info-area');
+    if (badgeArea && currentVerb.item_id && _hasProgressManager()) {
+        badgeArea.innerHTML = ProgressManager.getProgressBadgeHtml(currentVerb.item_id);
+    }
     
     // Reset UI
     inputs.forEach(input => {
@@ -210,6 +224,9 @@ function recordMistake() {
     if (!madeMistakeOnCurrent) {
         madeMistakeOnCurrent = true;
         mistakes.push(currentVerb);
+        if (currentVerb.item_id && _hasProgressManager()) {
+            ProgressManager.update(currentVerb.item_id, false);
+        }
     }
 }
 
@@ -245,6 +262,11 @@ function checkAllCorrect() {
     
     if (allCorrect) {
         inputs.forEach(input => input.disabled = true);
+
+        // 正解時に進捗を更新（間違えがなかった場合のみ）
+        if (!madeMistakeOnCurrent && currentVerb.item_id && _hasProgressManager()) {
+            ProgressManager.update(currentVerb.item_id, true);
+        }
         
         speakWords([
             currentVerb.present,

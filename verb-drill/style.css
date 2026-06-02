@@ -148,6 +148,27 @@ h1 {
     letter-spacing: 0.03em;
 }
 
+/* ── Progress Badges ─────────────────── */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: 9999px;
+    margin-right: 5px;
+    margin-bottom: 6px;
+    border: 1px solid transparent;
+}
+.progress-badge { font-size: 0.78rem; }
+.progress-new           { background: #e8f4fd; color: #1a6fa8; border-color: #93c6e8; }
+.progress-accuracy-good { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.progress-accuracy-mid  { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+.progress-accuracy-bad  { background: #ffe4e6; color: #9f1239; border-color: #fca5a5; }
+.progress-streak-good   { background: #fef3c7; color: #78350f; border-color: #fcd34d; }
+.progress-streak-ok     { background: #d1fae5; color: #065f46; border-color: #34d399; }
+.progress-streak-warn   { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+.progress-streak-bad    { background: #ffe4e6; color: #9f1239; border-color: #f87171; }
+
 /* ── Input Grid ──────────────────────── */
 .inputs-grid {
     display: grid;
