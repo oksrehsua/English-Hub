@@ -70,9 +70,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 中断データのチェック
-    checkSuspendData();
-
     // 進捗データを IndexedDB から自動読み込み
     idbLoadProgress();
 
@@ -343,8 +340,6 @@ function resetToSetup(force) {
         reviewArea.style.display = 'none';
     }
 
-    // 中断データの再チェック
-    checkSuspendData();
 }
 
 
@@ -1015,9 +1010,6 @@ function nextQuestion() {
     if (currentIndex < currentQuestions.length) {
         displayQuestion();
     } else {
-        // クイズ完了時、中断データを自動削除
-        localStorage.removeItem('triple_echo_suspend');
-
         const accuracy = Math.round((correctCount / currentQuestions.length) * 100) || 0;
         const rankData = getRankData(accuracy);
         const comment = rankData.comments[Math.floor(Math.random() * rankData.comments.length)];
@@ -1529,58 +1521,148 @@ async function clearProgressData() {
 
 // ── 中断・再開機能 ─────────────────────────────
 
-const SUSPEND_KEY = 'triple_echo_suspend';
+/**
+ * SuspendManager
+ * 中断データを JSON ファイルとして File System Access API で保存・読み込みする。
+ * localStorage は使用しない。
+ */
+const SuspendManager = {
+    fileHandle: null,
 
-function checkSuspendData() {
-    const resumeCard = document.getElementById('resume-card');
-    if (!resumeCard) return;
+    /**
+     * 中断データをJSONファイルに保存する。
+     * fileHandle があれば自動上書き、なければ showSaveFilePicker を開く。
+     * @param {Object} data - 保存するJSON（{questions:[{id,source}], currentIndex, ...}）
+     * @returns {boolean} 保存成功なら true、キャンセルなら false
+     */
+    async saveToFile(data) {
+        const jsonStr = JSON.stringify(data, null, 2);
 
-    const raw = localStorage.getItem(SUSPEND_KEY);
-    if (!raw) {
-        resumeCard.style.display = 'none';
-        return;
+        if (!window.showSaveFilePicker) {
+            this._fallbackDownload(jsonStr);
+            return true;
+        }
+
+        try {
+            if (!this.fileHandle) {
+                this.fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'triple-echo-suspend.json',
+                    types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+                });
+            }
+            const writable = await this.fileHandle.createWritable();
+            await writable.write(jsonStr);
+            await writable.close();
+            return true;
+        } catch (err) {
+            if (err.name === 'AbortError') return false; // キャンセル
+            console.error('中断データ保存エラー:', err);
+            this.fileHandle = null;
+            this._fallbackDownload(jsonStr);
+            return true;
+        }
+    },
+
+    /**
+     * JSONファイルを開いて中断データを読み込む。
+     * @returns {Object|null} パース済みデータ、またはキャンセル・エラー時は null
+     */
+    async loadFromFile() {
+        if (!window.showOpenFilePicker) {
+            // フォールバック: input[type=file] を動的生成
+            return new Promise((resolve) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) { resolve(null); return; }
+                    try {
+                        const text = await file.text();
+                        resolve(JSON.parse(text));
+                    } catch {
+                        alert('中断データファイルの読み込みに失敗しました。');
+                        resolve(null);
+                    }
+                };
+                input.click();
+            });
+        }
+
+        try {
+            const [handle] = await window.showOpenFilePicker({
+                types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+                multiple: false
+            });
+            const file = await handle.getFile();
+            const text = await file.text();
+            return JSON.parse(text);
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('中断データ読み込みエラー:', err);
+                alert('中断データファイルの読み込みに失敗しました。');
+            }
+            return null;
+        }
+    },
+
+    hasFileHandle() { return !!this.fileHandle; },
+    clearFileHandle() { this.fileHandle = null; },
+
+    _fallbackDownload(jsonStr) {
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'triple-echo-suspend.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+
+    /** 保存完了トースト */
+    showSaveToast() {
+        let toast = document.getElementById('suspend-save-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'suspend-save-toast';
+            toast.style.cssText = [
+                'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+                'background:#1a1a1a', 'color:#fff', 'font-weight:700',
+                'padding:12px 24px', 'border-radius:12px',
+                'box-shadow:0 4px 16px rgba(0,0,0,.2)',
+                'font-size:0.9rem', 'z-index:9999',
+                'transition:opacity .4s ease', 'white-space:nowrap'
+            ].join(';');
+            document.body.appendChild(toast);
+        }
+        toast.textContent = '中断データを保存しました';
+        toast.style.opacity = '1';
+        clearTimeout(toast._hideTimer);
+        toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
     }
+};
 
-    try {
-        const data = JSON.parse(raw);
-        const detail = document.getElementById('resume-card-detail');
-        const savedDate = new Date(data.savedAt);
-        const dateStr = savedDate.toLocaleDateString('ja-JP') + ' ' + savedDate.toLocaleTimeString('ja-JP', { hour12: false });
-
-        let modeLabel = '';
-        if (data.isListeningMode) modeLabel = ' ｜ 再生モード';
-        if (data.isDictationMode) modeLabel = ' ｜ ディクテーション';
-
-        detail.textContent = `進捗: ${data.currentIndex + 1} / ${data.totalQuestions} 問目${modeLabel} ｜ 保存: ${dateStr}`;
-        resumeCard.style.display = 'block';
-    } catch (e) {
-        console.error('中断データの読み込みに失敗しました:', e);
-        localStorage.removeItem(SUSPEND_KEY);
-        resumeCard.style.display = 'none';
-    }
-}
-
-function suspendQuiz() {
+async function suspendQuiz() {
     stopAnyAudio();
 
+    // IDリストのみ保存（問題オブジェクト全体は持たない）
     const suspendData = {
-        currentQuestions: currentQuestions,
+        savedAt: new Date().toISOString(),
         currentIndex: currentIndex,
         correctCount: correctCount,
         totalQuestions: currentQuestions.length,
         isReviewMode: isReviewMode,
         isListeningMode: isListeningMode,
         isDictationMode: isDictationMode,
-        savedAt: new Date().toISOString()
+        questions: currentQuestions.map(q => ({ id: q.id, source: q.source || '' }))
     };
 
-    try {
-        localStorage.setItem(SUSPEND_KEY, JSON.stringify(suspendData));
-    } catch (e) {
-        alert('中断データの保存に失敗しました。ブラウザのストレージ容量が不足している可能性があります。');
-        console.error('Suspend save error:', e);
-        return;
-    }
+    const saved = await SuspendManager.saveToFile(suspendData);
+    if (!saved) return; // ユーザーがキャンセルした場合は画面を維持
+
+    SuspendManager.showSaveToast();
 
     // 中断時にも進捗CSVを上書き保存する（ハンドルがある場合のみ、サイレント保存）
     if (ProgressManager.getFileHandle()) {
@@ -1591,22 +1673,53 @@ function suspendQuiz() {
     resetToSetup(true);
 }
 
-function resumeQuiz() {
+async function resumeQuiz() {
     initGlobalAudio();
 
-    const raw = localStorage.getItem(SUSPEND_KEY);
-    if (!raw) {
-        alert('中断データが見つかりませんでした。');
+    if (allQuestions.length === 0) {
+        alert('先に問題CSVファイルを読み込んでください。\n問題CSVを読み込んだ後、中断データを読み込んでください。');
         return;
     }
 
+    const data = await SuspendManager.loadFromFile();
+    if (!data) return; // キャンセルまたはエラー
+
     try {
-        const data = JSON.parse(raw);
+        // source + id の複合キーで allQuestions からマッチング
+        // フォールバック: source が一致しない場合は id のみでマッチ
+        const idMap = new Map(); // key: `${source}::${id}` → question
+        const idOnlyMap = new Map(); // key: id → question (最後の一致)
+        for (const q of allQuestions) {
+            idMap.set(`${q.source || ''}::${q.id}`, q);
+            idOnlyMap.set(q.id, q);
+        }
+
+        let missCount = 0;
+        const restored = [];
+        for (const ref of data.questions) {
+            const compositeKey = `${ref.source || ''}::${ref.id}`;
+            const q = idMap.get(compositeKey) || idOnlyMap.get(ref.id);
+            if (q) {
+                restored.push(q);
+            } else {
+                missCount++;
+            }
+        }
+
+        if (restored.length === 0) {
+            alert('中断データの問題が現在読み込まれているCSVと一致しませんでした。\n問題CSVを正しく読み込んでいるか確認してください。');
+            return;
+        }
+
+        if (missCount > 0) {
+            const ok = confirm(`${missCount} 問がCSVと一致しませんでした（スキップされます）。\n残り ${restored.length} 問で再開しますか？`);
+            if (!ok) return;
+        }
 
         // グローバル状態を復元
-        currentQuestions = data.currentQuestions;
-        currentIndex = data.currentIndex;
-        correctCount = data.correctCount;
+        currentQuestions = restored;
+        currentIndex = Math.min(data.currentIndex || 0, restored.length - 1);
+        correctCount = data.correctCount || 0;
         isReviewMode = data.isReviewMode || false;
         isListeningMode = data.isListeningMode || false;
         isDictationMode = data.isDictationMode || false;
@@ -1617,23 +1730,11 @@ function resumeQuiz() {
         appArea.innerHTML = appAreaOriginalHTML;
         appArea.style.display = 'block';
 
-        // 中断データを削除（再開したので不要）
-        localStorage.removeItem(SUSPEND_KEY);
-
-        // 問題を表示
         displayQuestion();
     } catch (e) {
         console.error('中断データの復元に失敗しました:', e);
-        alert('中断データの読み込みに失敗しました。データが破損している可能性があります。');
-        localStorage.removeItem(SUSPEND_KEY);
-        checkSuspendData();
+        alert('中断データの読み込みに失敗しました。ファイルが破損している可能性があります。');
     }
-}
-
-function deleteSuspendData() {
-    if (!confirm('中断データを削除しますか？\nこの操作は取り消せません。')) return;
-    localStorage.removeItem(SUSPEND_KEY);
-    checkSuspendData();
 }
 
 // ── ダッシュボード（グラフ）機能 ────────────────────────
