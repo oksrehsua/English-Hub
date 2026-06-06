@@ -131,6 +131,12 @@ async function handleFileSelect(files) {
             if (rows.length > 0 && Array.isArray(rows[0])) {
                 const firstCell = rows[0][0].replace(/^\ufeff/, '').trim().toLowerCase();
                 if (firstCell === 'item_id') {
+                    const headers = rows[0].map(c => c.trim().toLowerCase());
+                    if (headers.includes('app_name') || headers.includes('total_count')) {
+                        console.warn(`Skipping ${file.name}: This is a progress CSV, not a question CSV.`);
+                        continue;
+                    }
+
                     for (let i = 1; i < rows.length; i++) {
                         const r = rows[i];
                         if (r.length < 7) continue;
