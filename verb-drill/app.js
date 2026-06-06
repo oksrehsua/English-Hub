@@ -19,9 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 
     // 進捗データ読み込み
-    if (_hasProgressManager()) {
-        ProgressManager.loadData();
-    }
+    loadProgressOnInit();
 
     // Load Default CSV
     Papa.parse('verbs.csv', {
@@ -345,4 +343,117 @@ function showResult() {
         mistakesContainer.style.display = 'none';
         retryBtn.style.display = 'none';
     }
+}
+
+// ── 進捗ロード＆初期化 ──
+async function loadProgressOnInit() {
+    if (_hasProgressManager()) {
+        await ProgressManager.initProgress('progress-loaded-indicator', () => updateDashboardButtonVisibility());
+    }
+}
+
+// ── 手動ファイル操作 ──
+function loadProgressFromFile() {
+    if (_hasProgressManager()) ProgressManager.loadProgressFromFile('progress-loaded-indicator', () => updateDashboardButtonVisibility());
+}
+
+async function exportProgressCSVManual() {
+    if (_hasProgressManager()) await ProgressManager.saveToFile(false, () => ProgressManager.showSaveToast());
+}
+
+async function clearProgressData() {
+    if (_hasProgressManager()) await ProgressManager.clearProgressData('progress-loaded-indicator', () => updateDashboardButtonVisibility());
+}
+
+// ── ダッシュボード機能 ──
+let masteryChartInstance = null;
+
+function updateDashboardButtonVisibility() {
+    const btn = document.getElementById('dashboard-btn');
+    if (!btn) return;
+    const pData = ProgressManager.getData();
+    if (Object.keys(pData).length > 0) {
+        btn.style.display = 'inline-block';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function showDashboard() {
+    if (typeof Chart === 'undefined') {
+        alert('グラフ描画ライブラリを読み込み中です。少々お待ちください。');
+        return;
+    }
+    
+    document.getElementById('dashboard-modal').style.display = 'flex';
+    
+    const lastDateEl = document.getElementById('last-learning-date');
+    const lastPlayedStr = localStorage.getItem('EnglishHubLastActivity_verb-drill') || localStorage.getItem('TripleEchoLastPlayed');
+    if (lastPlayedStr) {
+        const d = new Date(lastPlayedStr);
+        lastDateEl.textContent = '直近の学習: ' + d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour12: false });
+    } else {
+        lastDateEl.textContent = '直近の学習: 記録なし';
+    }
+    
+    const pData = ProgressManager.getData();
+    const masteryCtx = document.getElementById('mastery-chart').getContext('2d');
+    
+    if (masteryChartInstance) masteryChartInstance.destroy();
+
+    let mastered = 0;
+    let learning = 0;
+    let struggling = 0;
+    let unanswered = 0;
+    
+    (verbsData || []).forEach(q => {
+        const p = pData[q.item_id];
+        if (p && p.totalCount > 0) {
+            if (p.streak >= 3) mastered++;
+            else if (p.streak < 0) struggling++;
+            else learning++;
+        } else {
+            unanswered++;
+        }
+    });
+    
+    masteryChartInstance = new Chart(masteryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['マスター済 (3連続正解以上)', '学習中 (0〜2回)', '苦手 (連続不正解)', '未学習'],
+            datasets: [{
+                data: [mastered, learning, struggling, unanswered],
+                backgroundColor: ['#4ade80', '#fbbf24', '#f87171', '#4b5563'],
+                borderWidth: 2,
+                borderColor: '#2a2f3a'
+            }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: { color: '#e2e8f0' }
+                },
+                datalabels: {
+                    color: '#fff',
+                    font: { weight: 'bold', size: 14 },
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.forEach(data => { sum += data; });
+                        if (sum === 0 || value === 0) return null;
+                        let percentage = (value * 100 / sum).toFixed(1) + '%';
+                        return percentage;
+                    }
+                }
+            }
+        }
+    });
+}
+
+function closeDashboard() {
+    document.getElementById('dashboard-modal').style.display = 'none';
 }
