@@ -224,8 +224,8 @@ function recordMistake() {
     if (!madeMistakeOnCurrent) {
         madeMistakeOnCurrent = true;
         mistakes.push(currentVerb);
-        if (currentVerb.item_id && _hasProgressManager()) {
-            ProgressManager.update(currentVerb.item_id, false);
+        if (window.ProgressManager) {
+            ProgressManager.update(currentVerb.item_id, false, 'verb-drill');
         }
     }
 }
@@ -264,8 +264,8 @@ function checkAllCorrect() {
         inputs.forEach(input => input.disabled = true);
 
         // 正解時に進捗を更新（間違えがなかった場合のみ）
-        if (!madeMistakeOnCurrent && currentVerb.item_id && _hasProgressManager()) {
-            ProgressManager.update(currentVerb.item_id, true);
+        if (window.ProgressManager && !madeMistakeOnCurrent && currentVerb.item_id) {
+            ProgressManager.update(currentVerb.item_id, true, 'verb-drill');
         }
         
         speakWords([

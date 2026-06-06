@@ -1,2 +1,5 @@
 english-questions/
 *.csv
+*-progress.csv
+*-suspend.json
+*progress*.json

@@ -218,30 +218,47 @@
     </div>
 
     <!-- ダッシュボードモーダル -->
-    <div id="dashboard-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-        <div style="background: white; border-radius: 16px; padding: 24px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative;">
-            <button onclick="closeDashboard()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; padding: 0; margin: 0; box-shadow: none;">&times;</button>
-            <h2 style="margin-top: 0; margin-bottom: 5px; color: var(--primary); text-align: center;">📊 学習ダッシュボード</h2>
-            <p id="last-learning-date" style="text-align: center; color: var(--text-gray); font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;"></p>
+    <div id="dashboard-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #1e2128; border-radius: 12px; border: 1px solid #2d3340; padding: 24px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; color: #e2e8f0; font-family: 'Inter', sans-serif;">
+            <button onclick="closeDashboard()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8; padding: 0; margin: 0; box-shadow: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+            <h2 style="margin-top: 0; margin-bottom: 5px; color: #ffffff; text-align: center; font-weight: 800; letter-spacing: 1px;">TASK ANALYSIS</h2>
+            <p id="last-learning-date" style="text-align: center; color: #94a3b8; font-size: 0.9rem; margin-top: 0; margin-bottom: 24px;"></p>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
-                <div style="background: var(--gray4); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
-                    <h3 style="text-align: center; margin-top: 0; font-size: 1rem; color: #333;">全体の習熟度</h3>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="mastery-chart"></canvas>
-                    </div>
+            <!-- Dashboard Tabs -->
+            <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+                <div style="display: flex; width: 100%; max-width: 400px; background: #131722; padding: 4px; border-radius: 8px; border: 1px solid #2d3340;">
+                    <button class="dashboard-tab-btn active" onclick="switchDashboardView('mastery')" id="tab-mastery" style="flex: 1; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; border: none; background: transparent; border-radius: 6px; font-weight: bold; color: #94a3b8; cursor: pointer; transition: all 0.2s; font-size: 0.9rem;">習熟度別</button>
+                    <button class="dashboard-tab-btn" onclick="switchDashboardView('category')" id="tab-category" style="flex: 1; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; border: none; background: transparent; border-radius: 6px; font-weight: bold; color: #94a3b8; cursor: pointer; transition: all 0.2s; font-size: 0.9rem;">単元別</button>
+                    <button class="dashboard-tab-btn" onclick="switchDashboardView('level')" id="tab-level" style="flex: 1; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; border: none; background: transparent; border-radius: 6px; font-weight: bold; color: #94a3b8; cursor: pointer; transition: all 0.2s; font-size: 0.9rem;">レベル別</button>
                 </div>
-                
-                <div style="background: var(--gray4); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
-                    <h3 style="text-align: center; margin-top: 0; font-size: 1rem; color: #333;">形式別の正答率</h3>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="accuracy-chart"></canvas>
+            </div>
+            
+            <style>
+                .dashboard-tab-btn.active {
+                    background: #3b82f6 !important;
+                    color: #ffffff !important;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                }
+            </style>
+
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+                <div style="background: #2a2f3a; padding: 20px; border-radius: 12px; border: 1px solid #374151; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="position: relative;">
+                        <h3 style="text-align: left; margin-top: 0; font-size: 1.1rem; color: #ffffff; font-weight: 500;">全体の習熟度</h3>
+                        <label id="chart-type-toggle-container" style="display: none; position: absolute; right: 0; top: 0; font-size: 0.85rem; color: #94a3b8; cursor: pointer; align-items: center; gap: 6px;">
+                            <input type="checkbox" id="stacked-100-toggle" onchange="updateDashboardCharts()" style="accent-color: #3b82f6; width: 14px; height: 14px;">
+                            100%表示
+                        </label>
+                    </div>
+                    <div style="position: relative; height: 300px; width: 100%; margin-top: 16px;">
+                        <canvas id="mastery-chart"></canvas>
                     </div>
                 </div>
             </div>
             
             <div style="text-align: center; margin-top: 24px;">
-                <button onclick="closeDashboard()" class="secondary-btn" style="margin: 0; background: var(--gray4);">閉じる</button>
+                <button onclick="closeDashboard()" style="padding: 10px 32px; background: #374151; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#374151'">閉じる</button>
             </div>
         </div>
     </div>

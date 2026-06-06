@@ -155,12 +155,15 @@ window.ProgressManager = (function() {
         },
 
         // 進捗の更新
-        update(itemId, isCorrect) {
+        update(itemId, isCorrect, appName = '') {
             if (!itemId) return;
             if (!progressData[itemId]) {
-                progressData[itemId] = { totalCount: 0, correctCount: 0, streak: 0, history: [] };
+                progressData[itemId] = { totalCount: 0, correctCount: 0, streak: 0, history: [], appName: '' };
             }
             const p = progressData[itemId];
+            if (appName) {
+                p.appName = appName;
+            }
             p.totalCount++;
             if (isCorrect) {
                 p.correctCount++;
@@ -248,11 +251,12 @@ window.ProgressManager = (function() {
 
         // 進捗CSVの文字列生成
         buildCSV() {
-            const header = 'item_id,total_count,correct_count,streak,history,last_updated';
+            const header = 'item_id,app_name,total_count,correct_count,streak,history,last_updated';
             const rows = Object.entries(progressData).map(([id, p]) => {
                 const historyStr = p.history.join(',');
                 const dateStr = p.lastUpdated || '';
-                return `${this.csvEscape(id)},${p.totalCount},${p.correctCount},${p.streak},"${historyStr}",${dateStr}`;
+                const appStr = p.appName || '';
+                return `${this.csvEscape(id)},${this.csvEscape(appStr)},${p.totalCount},${p.correctCount},${p.streak},"${historyStr}",${dateStr}`;
             });
             return [header, ...rows].join('\n');
         },
@@ -361,6 +365,7 @@ window.ProgressManager = (function() {
 
             const header = lines[0].split(',').map(h => h.trim().toLowerCase());
             const idIdx      = header.indexOf('item_id');
+            const appIdx     = header.indexOf('app_name');
             const totalIdx   = header.indexOf('total_count');
             const correctIdx = header.indexOf('correct_count');
             const streakIdx  = header.indexOf('streak');
@@ -377,12 +382,13 @@ window.ProgressManager = (function() {
                 const cols = this.parseCSVLine(lines[i]);
                 const id = cols[idIdx]?.trim();
                 if (!id) continue;
+                const appName = appIdx !== -1 ? cols[appIdx]?.trim() : '';
                 const total   = parseInt(cols[totalIdx])   || 0;
                 const correct = parseInt(cols[correctIdx]) || 0;
                 const streak  = parseInt(cols[streakIdx])  || 0;
                 const history = (cols[historyIdx] || '').split(',').map(s => s.trim()).filter(s => s === 'o' || s === 'x');
                 const lastUpdated = updatedIdx !== -1 ? (cols[updatedIdx]?.trim() || '') : '';
-                newData[id] = { totalCount: total, correctCount: correct, streak, history, lastUpdated };
+                newData[id] = { appName, totalCount: total, correctCount: correct, streak, history, lastUpdated };
                 loadedCount++;
             }
             this.mergeData(newData);

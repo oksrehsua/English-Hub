@@ -340,9 +340,15 @@
 
         <!-- ダッシュボードセクション -->
         <div class="dashboard-section">
-            <div class="dashboard-header">
-                📊 My Progress Dashboard
+            <div class="dashboard-header" style="justify-content: space-between;">
+                <div>📊 My Progress Dashboard</div>
+                <div>
+                    <button id="hub-import-progress-btn" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; background: transparent; border: 1px solid var(--primary); color: var(--primary); cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; font-weight: 600;" onmouseover="this.style.background='var(--primary)'; this.style.color='var(--white)';" onmouseout="this.style.background='transparent'; this.style.color='var(--primary)';">
+                        📥 進捗CSVを読み込む
+                    </button>
+                </div>
             </div>
+            <div id="hub-progress-indicator" style="display: none; font-size: 0.85rem; color: #10b981; text-align: right; margin-bottom: 12px; font-weight: 600;"></div>
             <div class="dashboard-grid">
                 <!-- カレンダー (学習記録) -->
                 <div class="calendar-wrapper">
@@ -428,6 +434,7 @@
         </footer>
     </div>
     
+    <script src="shared/progress-manager.js"></script>
     <script src="shared/hub-dashboard.js"></script>
 </body>
 

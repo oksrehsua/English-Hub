@@ -1461,7 +1461,7 @@ async function idbClearProgress() {
  */
 function updateProgress(itemId, isCorrect) {
     if (!itemId) return;
-    ProgressManager.update(itemId, isCorrect);
+    ProgressManager.update(itemId, isCorrect, 'triple-echo');
     localStorage.setItem('TripleEchoLastPlayed', new Date().toISOString());
     if (typeof logHubActivity === 'function') logHubActivity('triple-echo');
 }
@@ -1757,6 +1757,195 @@ function closeDashboard() {
     document.getElementById('dashboard-modal').style.display = 'none';
 }
 
+let currentDashboardView = 'mastery';
+
+function switchDashboardView(view) {
+    currentDashboardView = view;
+    const btns = document.querySelectorAll('.dashboard-tab-btn');
+    if (btns.length > 0) {
+        btns.forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById('tab-' + view);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+    updateDashboardCharts();
+}
+
+function updateDashboardCharts() {
+    const pData = ProgressManager.getData();
+    let filteredQuestions = allQuestions;
+
+    const masteryCtx = document.getElementById('mastery-chart').getContext('2d');
+    
+    if (masteryChartInstance) masteryChartInstance.destroy();
+
+    const masteryTitle = document.getElementById('mastery-chart').parentElement.parentElement.querySelector('h3');
+    const toggleContainer = document.getElementById('chart-type-toggle-container');
+
+    if (currentDashboardView === 'mastery') {
+        if (masteryTitle) masteryTitle.textContent = '全体の習熟度';
+        if (toggleContainer) toggleContainer.style.display = 'none';
+
+        // 1. 習熟度の計算 (Overall)
+        let mastered = 0;
+        let learning = 0;
+        let struggling = 0;
+        let unanswered = 0;
+        
+        filteredQuestions.forEach(q => {
+            const p = pData[q.id];
+            if (p && p.totalCount > 0) {
+                if (p.streak >= 3) mastered++;
+                else if (p.streak < 0) struggling++;
+                else learning++;
+            } else {
+                unanswered++;
+            }
+        });
+        
+        masteryChartInstance = new Chart(masteryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['マスター済 (3連続正解以上)', '学習中 (0〜2回)', '苦手 (連続不正解)', '未学習'],
+                datasets: [{
+                    data: [mastered, learning, struggling, unanswered],
+                    backgroundColor: ['#4ade80', '#fbbf24', '#f87171', '#4b5563'],
+                    borderWidth: 2,
+                    borderColor: '#2a2f3a'
+                }]
+            },
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: '#e2e8f0' }
+                    },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 14 },
+                        formatter: (value, ctx) => {
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.forEach(data => { sum += data; });
+                            if (sum === 0 || value === 0) return null;
+                            let percentage = (value * 100 / sum).toFixed(1) + '%';
+                            return percentage;
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        // 単元別 or レベル別
+        const isCategory = currentDashboardView === 'category';
+        if (masteryTitle) masteryTitle.textContent = isCategory ? '単元別の習熟度' : 'レベル別の習熟度';
+        if (toggleContainer) toggleContainer.style.display = 'inline-flex';
+
+        const is100Percent = document.getElementById('stacked-100-toggle') ? document.getElementById('stacked-100-toggle').checked : false;
+
+        const groups = {}; 
+        
+        filteredQuestions.forEach(q => {
+            let key = isCategory ? q.category : q.level;
+            if (!key) key = '未分類';
+            
+            if (!groups[key]) {
+                groups[key] = { mastered: 0, learning: 0, struggling: 0, unanswered: 0 };
+            }
+            const p = pData[q.id];
+            if (p && p.totalCount > 0) {
+                if (p.streak >= 3) groups[key].mastered++;
+                else if (p.streak < 0) groups[key].struggling++;
+                else groups[key].learning++;
+            } else {
+                groups[key].unanswered++;
+            }
+        });
+        
+        const labels = Object.keys(groups).sort((a, b) => {
+            if (!isCategory) {
+                const numA = Number(a);
+                const numB = Number(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            }
+            return a.localeCompare(b);
+        });
+
+        // 1. Stacked Bar Chart for Mastery
+        let dsMastered = labels.map(l => groups[l].mastered);
+        let dsLearning = labels.map(l => groups[l].learning);
+        let dsStruggling = labels.map(l => groups[l].struggling);
+        let dsUnanswered = labels.map(l => groups[l].unanswered);
+
+        if (is100Percent) {
+            dsMastered = labels.map(l => {
+                const total = groups[l].mastered + groups[l].learning + groups[l].struggling + groups[l].unanswered;
+                return total > 0 ? (groups[l].mastered / total) * 100 : 0;
+            });
+            dsLearning = labels.map(l => {
+                const total = groups[l].mastered + groups[l].learning + groups[l].struggling + groups[l].unanswered;
+                return total > 0 ? (groups[l].learning / total) * 100 : 0;
+            });
+            dsStruggling = labels.map(l => {
+                const total = groups[l].mastered + groups[l].learning + groups[l].struggling + groups[l].unanswered;
+                return total > 0 ? (groups[l].struggling / total) * 100 : 0;
+            });
+            dsUnanswered = labels.map(l => {
+                const total = groups[l].mastered + groups[l].learning + groups[l].struggling + groups[l].unanswered;
+                return total > 0 ? (groups[l].unanswered / total) * 100 : 0;
+            });
+        }
+
+        masteryChartInstance = new Chart(masteryCtx, {
+            type: 'bar',
+            data: {
+                labels: labels.length > 0 ? labels : ['データなし'],
+                datasets: [
+                    { label: 'マスター済', data: dsMastered.length > 0 ? dsMastered : [0], backgroundColor: '#4ade80' },
+                    { label: '学習中', data: dsLearning.length > 0 ? dsLearning : [0], backgroundColor: '#fbbf24' },
+                    { label: '苦手', data: dsStruggling.length > 0 ? dsStruggling : [0], backgroundColor: '#f87171' },
+                    { label: '未学習', data: dsUnanswered.length > 0 ? dsUnanswered : [0], backgroundColor: '#4b5563' }
+                ]
+            },
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { 
+                        stacked: true,
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#374151', drawBorder: false }
+                    },
+                    y: { 
+                        stacked: true, 
+                        beginAtZero: true,
+                        max: is100Percent ? 100 : undefined,
+                        ticks: { color: '#94a3b8' },
+                        grid: { color: '#374151', drawBorder: false }
+                    }
+                },
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: '#e2e8f0' }
+                    },
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: (value) => {
+                            if (value <= 0) return '';
+                            return is100Percent ? Math.round(value) + '%' : value;
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
 function showDashboard() {
     if (typeof Chart === 'undefined') {
         alert('グラフ描画ライブラリを読み込み中です。少々お待ちください。');
@@ -1775,112 +1964,6 @@ function showDashboard() {
         lastDateEl.textContent = '直近の学習: 記録なし';
     }
     
-    // 1. 習熟度の計算
-    let mastered = 0;
-    let learning = 0;
-    let struggling = 0;
-    
-    const pData = ProgressManager.getData();
-    Object.values(pData).forEach(p => {
-        if (p.streak >= 3) {
-            mastered++;
-        } else if (p.streak < 0) {
-            struggling++;
-        } else {
-            learning++;
-        }
-    });
-    
-    const masteryCtx = document.getElementById('mastery-chart').getContext('2d');
-    if (masteryChartInstance) masteryChartInstance.destroy();
-    
-    masteryChartInstance = new Chart(masteryCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['マスター済 (3連続正解以上)', '学習中 (0〜2回)', '苦手 (連続不正解)'],
-            datasets: [{
-                data: [mastered, learning, struggling],
-                backgroundColor: ['#34d399', '#fcd34d', '#f87171'],
-                borderWidth: 0
-            }]
-        },
-        plugins: [ChartDataLabels],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' },
-                datalabels: {
-                    color: '#fff',
-                    font: { weight: 'bold', size: 14 },
-                    formatter: (value, ctx) => {
-                        let sum = 0;
-                        let dataArr = ctx.chart.data.datasets[0].data;
-                        dataArr.map(data => {
-                            sum += data;
-                        });
-                        if (sum === 0 || value === 0) return null;
-                        let percentage = (value * 100 / sum).toFixed(1) + '%';
-                        return percentage;
-                    }
-                }
-            }
-        }
-    });
-    
-    // 2. 形式別の正答率計算
-    const formatStats = {};
-    allQuestions.forEach(q => {
-        const fmt = q.format || 'その他';
-        if (!formatStats[fmt]) formatStats[fmt] = { correct: 0, total: 0 };
-        const p = pData[q.id];
-        if (p && p.totalCount > 0) {
-            formatStats[fmt].correct += p.correctCount;
-            formatStats[fmt].total += p.totalCount;
-        }
-    });
-    
-    const labels = [];
-    const accuracies = [];
-    
-    Object.entries(formatStats).forEach(([fmt, stats]) => {
-        if (stats.total > 0) {
-            labels.push(fmt);
-            accuracies.push(Math.round((stats.correct / stats.total) * 100));
-        }
-    });
-    
-    const accuracyCtx = document.getElementById('accuracy-chart').getContext('2d');
-    if (accuracyChartInstance) accuracyChartInstance.destroy();
-    
-    accuracyChartInstance = new Chart(accuracyCtx, {
-        type: 'bar',
-        data: {
-            labels: labels.length > 0 ? labels : ['データなし'],
-            datasets: [{
-                label: '正解率 (%)',
-                data: accuracies.length > 0 ? accuracies : [0],
-                backgroundColor: '#60a5fa',
-                borderRadius: 4
-            }]
-        },
-        plugins: [ChartDataLabels],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, max: 100 }
-            },
-            plugins: {
-                legend: { display: false },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    color: '#60a5fa',
-                    font: { weight: 'bold', size: 12 },
-                    formatter: (value) => value + '%'
-                }
-            }
-        }
-    });
+    // Default view
+    switchDashboardView('mastery');
 }

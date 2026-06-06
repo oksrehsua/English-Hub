@@ -513,10 +513,10 @@ function recordMistake() {
     if (!madeMistakeOnCurrent) {
         madeMistakeOnCurrent = true;
         mistakes.push(currentWord);
-        if (currentWord.item_id) {
-            ProgressManager.update(currentWord.item_id, false);
-            logActivity();
+        if (window.ProgressManager) {
+            ProgressManager.update(currentWord.item_id, false, 'word-drill');
         }
+        logActivity();
     }
 }
 
@@ -550,10 +550,10 @@ function handleCorrect() {
     });
     isAnswerRevealed = true;
     
-    if (!madeMistakeOnCurrent && currentWord.item_id) {
-        ProgressManager.update(currentWord.item_id, true);
-        logActivity();
+    if (window.ProgressManager && !madeMistakeOnCurrent) {
+        ProgressManager.update(currentWord.item_id, true, 'word-drill');
     }
+    logActivity();
     
     if (currentWord.full_sentence) {
         speakWords(currentWord.full_sentence, 1.0);

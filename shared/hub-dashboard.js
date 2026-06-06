@@ -1,11 +1,80 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // ProgressManager が読み込まれていれば初期化とイベント設定を行う
+    if (window.ProgressManager) {
+        await ProgressManager.initProgress('hub-progress-indicator');
+        syncActivityLogFromProgress();
+        
+        const importBtn = document.getElementById('hub-import-progress-btn');
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                ProgressManager.loadProgressFromFile('hub-progress-indicator', () => {
+                    syncActivityLogFromProgress();
+                });
+            });
+        }
+    }
+
     initCalendar();
     // 初期状態は今月のサマリーを表示
     showMonthlyDashboard(currentDate.getFullYear(), currentDate.getMonth());
 });
 
 let currentDate = new Date(); // 表示中の月を管理
-let activityLog = {};
+let localActivityLog = {};
+let progressActivityLog = {};
+
+function getCombinedActivityLog() {
+    const combined = {};
+    for (const dateStr in localActivityLog) {
+        combined[dateStr] = { ...localActivityLog[dateStr] };
+    }
+    for (const dateStr in progressActivityLog) {
+        if (!combined[dateStr]) combined[dateStr] = {};
+        for (const app in progressActivityLog[dateStr]) {
+            // progressActivityLog is just tracking distinct items updated on that day.
+            // If localActivityLog already has activity for this app today, we don't add to it
+            // because local activity is more accurate (tracks total answers).
+            // If local doesn't have it, we use the progress count.
+            if (!combined[dateStr][app]) {
+                combined[dateStr][app] = progressActivityLog[dateStr][app];
+            }
+        }
+    }
+    return combined;
+}
+
+function syncActivityLogFromProgress() {
+    if (!window.ProgressManager) return;
+    const pData = ProgressManager.getData();
+    progressActivityLog = {};
+    let updated = false;
+    
+    for (const itemId in pData) {
+        const item = pData[itemId];
+        if (item.lastUpdated) {
+            const d = new Date(item.lastUpdated);
+            if (!isNaN(d)) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+                
+                const appName = item.appName || 'その他の記録';
+                
+                if (!progressActivityLog[dateStr]) progressActivityLog[dateStr] = {};
+                if (!progressActivityLog[dateStr][appName]) progressActivityLog[dateStr][appName] = 0;
+                
+                progressActivityLog[dateStr][appName] += 1;
+                updated = true;
+            }
+        }
+    }
+    
+    if (updated && document.getElementById('calendar-grid')) {
+        renderCalendar();
+        showMonthlyDashboard(currentDate.getFullYear(), currentDate.getMonth());
+    }
+}
 
 function initCalendar() {
     const prevBtn = document.getElementById('cal-prev');
@@ -15,7 +84,22 @@ function initCalendar() {
     try {
         const stored = localStorage.getItem('EnglishHubActivityLog');
         if (stored) {
-            activityLog = JSON.parse(stored);
+            localActivityLog = JSON.parse(stored);
+            
+            // 古い仕様で作られた「その他の記録」はローカル保存データからは削除する（進捗CSV側からのみ再構築するため）
+            let needsSave = false;
+            for (const d in localActivityLog) {
+                if (localActivityLog[d]['その他の記録']) {
+                    delete localActivityLog[d]['その他の記録'];
+                    needsSave = true;
+                }
+                if (Object.keys(localActivityLog[d]).length === 0) {
+                    delete localActivityLog[d];
+                }
+            }
+            if (needsSave) {
+                localStorage.setItem('EnglishHubActivityLog', JSON.stringify(localActivityLog));
+            }
         }
     } catch (e) {
         console.error(e);
@@ -80,6 +164,8 @@ function renderCalendar() {
         grid.appendChild(empty);
     }
 
+    const combinedLog = getCombinedActivityLog();
+
     for (let day = 1; day <= daysInMonth; day++) {
         const cell = document.createElement('div');
         cell.className = 'calendar-cell';
@@ -89,7 +175,7 @@ function renderCalendar() {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         cell.dataset.date = dateStr;
         
-        const counts = activityLog[dateStr];
+        const counts = combinedLog[dateStr];
         let totalCount = 0;
         if (counts) {
             for (let app in counts) {
@@ -122,14 +208,16 @@ function showMonthlyDashboard(year, month) {
 
     title.textContent = `${year}年${month + 1}月の学習状況`;
     
+    const combinedLog = getCombinedActivityLog();
+    
     // その月の全アプリの合算を計算
     let appTotals = {};
     let totalQuestions = 0;
     const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
     
-    for (let dateStr in activityLog) {
+    for (let dateStr in combinedLog) {
         if (dateStr.startsWith(prefix)) {
-            const counts = activityLog[dateStr];
+            const counts = combinedLog[dateStr];
             for (let app in counts) {
                 if (!appTotals[app]) appTotals[app] = 0;
                 appTotals[app] += counts[app];
@@ -159,7 +247,8 @@ function showDailyDashboard(dateStr) {
 
     title.textContent = `${dateStr} の学習状況`;
     
-    const counts = activityLog[dateStr];
+    const combinedLog = getCombinedActivityLog();
+    const counts = combinedLog[dateStr];
     let totalQuestions = 0;
     
     if (counts) {
