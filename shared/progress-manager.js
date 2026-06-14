@@ -158,7 +158,7 @@ window.ProgressManager = (function() {
         update(itemId, isCorrect, appName = '') {
             if (!itemId) return;
             if (!progressData[itemId]) {
-                progressData[itemId] = { totalCount: 0, correctCount: 0, streak: 0, history: [], appName: '' };
+                progressData[itemId] = { totalCount: 0, correctCount: 0, streak: 0, history: [], appName: '', dailyLog: {} };
             }
             const p = progressData[itemId];
             if (appName) {
@@ -175,6 +175,11 @@ window.ProgressManager = (function() {
             if (p.history.length > 20) p.history = p.history.slice(-20);
             
             p.lastUpdated = new Date().toISOString();
+
+            // 日別解答数を記録（カレンダー用）
+            const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+            if (!p.dailyLog) p.dailyLog = {};
+            p.dailyLog[today] = (p.dailyLog[today] || 0) + 1;
             
             this.scheduledSave();
         },
@@ -251,12 +256,13 @@ window.ProgressManager = (function() {
 
         // 進捗CSVの文字列生成
         buildCSV() {
-            const header = 'item_id,app_name,total_count,correct_count,streak,history,last_updated';
+            const header = 'item_id,app_name,total_count,correct_count,streak,history,last_updated,daily_log';
             const rows = Object.entries(progressData).map(([id, p]) => {
                 const historyStr = p.history.join(',');
                 const dateStr = p.lastUpdated || '';
                 const appStr = p.appName || '';
-                return `${this.csvEscape(id)},${this.csvEscape(appStr)},${p.totalCount},${p.correctCount},${p.streak},"${historyStr}",${dateStr}`;
+                const dailyLogStr = p.dailyLog ? JSON.stringify(p.dailyLog) : '';
+                return `${this.csvEscape(id)},${this.csvEscape(appStr)},${p.totalCount},${p.correctCount},${p.streak},"${historyStr}",${dateStr},${this.csvEscape(dailyLogStr)}`;
             });
             return [header, ...rows].join('\n');
         },
@@ -371,6 +377,7 @@ window.ProgressManager = (function() {
             const streakIdx  = header.indexOf('streak');
             const historyIdx = header.indexOf('history');
             const updatedIdx = header.indexOf('last_updated');
+            const dailyLogIdx = header.indexOf('daily_log');
 
             if (idIdx === -1 || totalIdx === -1) {
                 throw new Error('進捗CSVに必要なヘッダー（item_id, total_count）が見つかりません');
@@ -388,7 +395,11 @@ window.ProgressManager = (function() {
                 const streak  = parseInt(cols[streakIdx])  || 0;
                 const history = (cols[historyIdx] || '').split(',').map(s => s.trim()).filter(s => s === 'o' || s === 'x');
                 const lastUpdated = updatedIdx !== -1 ? (cols[updatedIdx]?.trim() || '') : '';
-                newData[id] = { appName, totalCount: total, correctCount: correct, streak, history, lastUpdated };
+                let dailyLog = {};
+                if (dailyLogIdx !== -1 && cols[dailyLogIdx]?.trim()) {
+                    try { dailyLog = JSON.parse(cols[dailyLogIdx].trim()); } catch(e) { /* ignore parse error */ }
+                }
+                newData[id] = { appName, totalCount: total, correctCount: correct, streak, history, lastUpdated, dailyLog };
                 loadedCount++;
             }
             this.mergeData(newData);

@@ -726,10 +726,10 @@ function getEnglishText(q) {
     if (usePlainAnswerDisplay) {
         englishText = answerForText;
     } else {
-        englishText = q.text.replace(choiceRegex, answerForText);
+        englishText = q.text.replace(/\([^)]*[ぁ-んァ-ン一-龥]+[^)]*\)/g, '');
+        englishText = englishText.replace(choiceRegex, answerForText);
         englishText = replaceBlanksByWord(englishText, w => w);
-        englishText = englishText.replace(/\[\s*.*?\s*\]/g, answerForText);
-        englishText = englishText.replace(/\([^)]*[ぁ-んァ-ン一-龥]+[^)]*\)/g, '').trim();
+        englishText = englishText.replace(/\[\s*.*?\s*\]/g, answerForText).trim();
         if (!englishText || englishText.length < 2) englishText = answerForText;
     }
     return englishText;
@@ -756,10 +756,10 @@ function getAnswerSentenceHtml(q) {
     if (usePlainAnswerDisplay) {
         answerSentenceHtml = `<span class="highlight-answer">${q.answer}</span>`;
     } else {
-        answerSentenceHtml = q.text.replace(choiceRegex, `<span class="highlight-answer">${q.answer}</span>`);
+        answerSentenceHtml = q.text.replace(/\([^)]*[ぁ-んァ-ン一-龥]+[^)]*\)/g, '');
+        answerSentenceHtml = answerSentenceHtml.replace(choiceRegex, `<span class="highlight-answer">${q.answer}</span>`);
         answerSentenceHtml = replaceBlanksByWord(answerSentenceHtml, w => `<span class="highlight-answer">${w}</span>`);
-        answerSentenceHtml = answerSentenceHtml.replace(/\[\s*.*?\s*\]/g, `<span class="highlight-answer">${q.answer}</span>`);
-        answerSentenceHtml = answerSentenceHtml.replace(/\([^)]*[ぁ-んァ-ン一-龥]+[^)]*\)/g, '').trim();
+        answerSentenceHtml = answerSentenceHtml.replace(/\[\s*.*?\s*\]/g, `<span class="highlight-answer">${q.answer}</span>`).trim();
         if (!answerSentenceHtml || answerSentenceHtml.length < 2) {
             answerSentenceHtml = `<span class="highlight-answer">${q.answer}</span>`;
         }

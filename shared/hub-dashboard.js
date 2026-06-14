@@ -51,7 +51,20 @@ function syncActivityLogFromProgress() {
     
     for (const itemId in pData) {
         const item = pData[itemId];
-        if (item.lastUpdated) {
+        const appName = item.appName || 'その他の記録';
+
+        if (item.dailyLog && typeof item.dailyLog === 'object' && Object.keys(item.dailyLog).length > 0) {
+            // dailyLog がある場合はそこから正確な日別カウントを取得
+            for (const dateStr in item.dailyLog) {
+                const count = item.dailyLog[dateStr];
+                if (!count || count <= 0) continue;
+                if (!progressActivityLog[dateStr]) progressActivityLog[dateStr] = {};
+                if (!progressActivityLog[dateStr][appName]) progressActivityLog[dateStr][appName] = 0;
+                progressActivityLog[dateStr][appName] += count;
+                updated = true;
+            }
+        } else if (item.lastUpdated) {
+            // dailyLog がない（旧データ）場合は lastUpdated にフォールバック
             const d = new Date(item.lastUpdated);
             if (!isNaN(d)) {
                 const yyyy = d.getFullYear();
@@ -59,12 +72,11 @@ function syncActivityLogFromProgress() {
                 const dd = String(d.getDate()).padStart(2, '0');
                 const dateStr = `${yyyy}-${mm}-${dd}`;
                 
-                const appName = item.appName || 'その他の記録';
-                
                 if (!progressActivityLog[dateStr]) progressActivityLog[dateStr] = {};
                 if (!progressActivityLog[dateStr][appName]) progressActivityLog[dateStr][appName] = 0;
                 
-                progressActivityLog[dateStr][appName] += 1;
+                // 旧データは totalCount を使って概算（lastUpdated の日にすべて解いたと仮定）
+                progressActivityLog[dateStr][appName] += item.totalCount || 1;
                 updated = true;
             }
         }
