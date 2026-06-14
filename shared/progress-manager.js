@@ -140,17 +140,27 @@ window.ProgressManager = (function() {
             saveTimer = setTimeout(() => this.saveData(), 800);
         },
 
-        // データクリア
+        // データクリア（リセット: 学習進捗はリセットしつつログと累計は保持）
         async clearData() {
             try {
+                for (const itemId in progressData) {
+                    const p = progressData[itemId];
+                    p.archivedTotalCount = (p.archivedTotalCount || 0) + (p.totalCount || 0);
+                    p.archivedCorrectCount = (p.archivedCorrectCount || 0) + (p.correctCount || 0);
+                    
+                    p.totalCount = 0;
+                    p.correctCount = 0;
+                    p.streak = 0;
+                    p.history = [];
+                }
+                
                 const db = await openIDB(IDB_NAME);
                 const tx = db.transaction(IDB_STORE, 'readwrite');
-                tx.objectStore(IDB_STORE).delete(IDB_KEY);
+                tx.objectStore(IDB_STORE).put(progressData, IDB_KEY);
                 await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
                 db.close();
-                progressData = {};
             } catch (e) {
-                console.warn('IDBクリア失敗:', e);
+                console.warn('IDBクリア(リセット)失敗:', e);
             }
         },
 
@@ -256,13 +266,13 @@ window.ProgressManager = (function() {
 
         // 進捗CSVの文字列生成
         buildCSV() {
-            const header = 'item_id,app_name,total_count,correct_count,streak,history,last_updated,daily_log';
+            const header = 'item_id,app_name,total_count,correct_count,streak,history,last_updated,daily_log,archived_total_count,archived_correct_count';
             const rows = Object.entries(progressData).map(([id, p]) => {
                 const historyStr = p.history.join(',');
                 const dateStr = p.lastUpdated || '';
                 const appStr = p.appName || '';
                 const dailyLogStr = p.dailyLog ? JSON.stringify(p.dailyLog) : '';
-                return `${this.csvEscape(id)},${this.csvEscape(appStr)},${p.totalCount},${p.correctCount},${p.streak},"${historyStr}",${dateStr},${this.csvEscape(dailyLogStr)}`;
+                return `${this.csvEscape(id)},${this.csvEscape(appStr)},${p.totalCount},${p.correctCount},${p.streak},"${historyStr}",${dateStr},${this.csvEscape(dailyLogStr)},${p.archivedTotalCount || 0},${p.archivedCorrectCount || 0}`;
             });
             return [header, ...rows].join('\n');
         },
@@ -378,6 +388,8 @@ window.ProgressManager = (function() {
             const historyIdx = header.indexOf('history');
             const updatedIdx = header.indexOf('last_updated');
             const dailyLogIdx = header.indexOf('daily_log');
+            const arcTotalIdx = header.indexOf('archived_total_count');
+            const arcCorrectIdx = header.indexOf('archived_correct_count');
 
             if (idIdx === -1 || totalIdx === -1) {
                 throw new Error('進捗CSVに必要なヘッダー（item_id, total_count）が見つかりません');
@@ -399,7 +411,10 @@ window.ProgressManager = (function() {
                 if (dailyLogIdx !== -1 && cols[dailyLogIdx]?.trim()) {
                     try { dailyLog = JSON.parse(cols[dailyLogIdx].trim()); } catch(e) { /* ignore parse error */ }
                 }
-                newData[id] = { appName, totalCount: total, correctCount: correct, streak, history, lastUpdated, dailyLog };
+                const archivedTotalCount = arcTotalIdx !== -1 ? (parseInt(cols[arcTotalIdx]) || 0) : 0;
+                const archivedCorrectCount = arcCorrectIdx !== -1 ? (parseInt(cols[arcCorrectIdx]) || 0) : 0;
+                
+                newData[id] = { appName, totalCount: total, correctCount: correct, streak, history, lastUpdated, dailyLog, archivedTotalCount, archivedCorrectCount };
                 loadedCount++;
             }
             this.mergeData(newData);
@@ -454,15 +469,14 @@ window.ProgressManager = (function() {
         },
 
         /**
-         * 進捗データをクリアする（確認ダイアログ付き）
+         * 進捗データをリセットする（確認ダイアログ付き）
          * @param {string} indicatorId - 非表示にする要素のID
          * @param {Function} [onCleared] - クリア後に呼ぶコールバック (省略可)
          */
         async clearProgressData(indicatorId, onCleared) {
-            if (!confirm('過去の正解率・解答履歴をすべてクリアしますか？\nこの操作は取り消せません。')) return;
+            if (!confirm('過去の学習記録（正解率やストリーク）をリセットしますか？\n（カレンダーの学習履歴はそのまま保持されます）')) return;
             await this.clearData();
-            const ind = indicatorId ? document.getElementById(indicatorId) : null;
-            if (ind) { ind.style.display = 'none'; ind.textContent = ''; }
+            // インジケータは非表示にせず、状態を維持する（件数は変わらないため）
             if (typeof onCleared === 'function') onCleared();
         },
 
