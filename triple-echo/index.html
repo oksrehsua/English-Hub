@@ -263,6 +263,35 @@
         </div>
     </div>
 
+    <!-- ペナルティ（徹底復習）モーダル -->
+    <div id="penalty-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #fff; border-radius: 12px; border: 3px solid #000; padding: 30px; max-width: 600px; width: 100%; position: relative; box-shadow: 8px 8px 0 #000;">
+            <button onclick="closePenaltyModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #666; padding: 0; margin: 0; line-height: 1;">&times;</button>
+            
+            <div style="background: #f8f9fa; border: 2px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="font-size: 0.9rem; color: #666; font-weight: bold;">お手本:</span>
+                    <label style="font-size: 0.85rem; color: #666; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <input type="checkbox" id="penalty-unmask-check" onchange="updatePenaltyDots()" style="accent-color: var(--primary);"> マスクを解除
+                    </label>
+                </div>
+                <div id="penalty-target-text" style="font-size: 1.3rem; font-weight: 900; color: #1a1a1a;"></div>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 15px; font-size: 1.5rem; letter-spacing: 5px; color: var(--border);" id="penalty-progress-dots">
+                ○○○○○
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="penalty-input" oninput="checkPenaltyInput(event)" autocomplete="off" placeholder="お手本通りに入力..." style="width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #000; border-radius: 8px; text-align: center; font-weight: bold; box-shadow: 3px 3px 0 var(--border); transition: background-color 0.2s;">
+            </div>
+            
+            <div style="text-align: center;">
+                <button onclick="closePenaltyModal()" class="secondary-btn" style="padding: 10px 32px; font-size: 1rem;">やめる</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../shared/hub-core.js"></script>
     <script src="../shared/progress-manager.js"></script>
     <script src="app.js"></script>

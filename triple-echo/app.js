@@ -617,7 +617,7 @@ function displayQuestion() {
         inputArea.appendChild(playBtnsDiv);
 
         setTimeout(() => {
-            playAudio(englishText);
+            playAudio(englishText, 1.0, Infinity);
         }, 500);
 
     } else if (isListeningMode) {
@@ -949,7 +949,12 @@ function checkAnswer() {
     const escapedText = englishText.replace(/'/g, "\\'");
     const playBtnsHtml = getPlayButtonsHtml(englishText);
 
-    expArea.innerHTML = `<strong style="font-size: 1.1em; color: #e95c8b;">解説:</strong><br><div style="margin-top: 10px; margin-bottom: 10px; font-weight: 700;">${q.explanation || q.exp || '解説はありません。'}</div>${playBtnsHtml}`;
+    let reviewBtnHtml = '';
+    if (!isCorrect) {
+        reviewBtnHtml = `<button onclick="openPenaltyModal()" class="play-audio-btn" style="background: var(--primary); color: #fff; border: none;">復習</button>`;
+    }
+
+    expArea.innerHTML = `<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"><strong style="font-size: 1.1em; color: #e95c8b;">解説:</strong>${reviewBtnHtml}</div><div style="margin-bottom: 10px; font-weight: 700;">${q.explanation || q.exp || '解説はありません。'}</div>${playBtnsHtml}`;
     expArea.style.display = 'block';
     document.getElementById('check-btn').style.display = 'none';
 
@@ -1181,7 +1186,7 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
         activePlayback.currentCount = currentIteration;
         if (onRepeat) onRepeat(currentIteration, count);
 
-        playCountdown(() => {
+        const doSpeak = () => {
             const utterance = new SpeechSynthesisUtterance(text);
             window.__currentUtterance = utterance; // Prevent GC
             const selectedVoice = getSelectedVoice();
@@ -1196,7 +1201,7 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
             utterance.onend = () => {
                 currentIteration++;
                 if (count === Infinity || currentIteration < count) {
-                    activePlayback.timeoutId = setTimeout(speak, 200);
+                    activePlayback.timeoutId = setTimeout(speak, 500);
                 } else {
                     stopAnyAudio();
                     if (autoNext && isListeningMode) {
@@ -1213,7 +1218,20 @@ function playAudio(text, rate = 1.0, count = 3, btnElem = null, autoNext = false
             };
 
             window.speechSynthesis.speak(utterance);
-        });
+        };
+
+        const isPenaltyModalOpen = document.getElementById('penalty-modal')?.style.display === 'flex';
+        
+        if (currentIteration === 0 && !isPenaltyModalOpen && (typeof isDictationMode !== 'undefined' && isDictationMode)) {
+            playCountdown(doSpeak);
+        } else {
+            if (currentIteration === 0) {
+                // ブラウザの仕様上、cancel() 直後の speak() が失敗することがあるため少し待つ
+                setTimeout(doSpeak, 250);
+            } else {
+                doSpeak();
+            }
+        }
     }
 
     speak();
@@ -1972,4 +1990,118 @@ function showDashboard() {
     
     // Default view
     switchDashboardView('mastery');
+}
+
+// ── 徹底復習（ペナルティ）モード ────────────────────────────
+let penaltyTargetText = '';
+let penaltyCount = 0;
+const PENALTY_MAX = 5;
+
+window.openPenaltyModal = function() {
+    const q = currentQuestions[currentIndex];
+    penaltyTargetText = getEnglishText(q);
+    penaltyCount = 0;
+    
+    document.getElementById('penalty-target-text').textContent = penaltyTargetText;
+    const inputEl = document.getElementById('penalty-input');
+    if (inputEl) {
+        inputEl.value = '';
+        inputEl.classList.remove('penalty-flash', 'penalty-shake');
+    }
+    
+    const unmaskCheck = document.getElementById('penalty-unmask-check');
+    if (unmaskCheck) unmaskCheck.checked = false;
+
+    updatePenaltyDots();
+    
+    const modal = document.getElementById('penalty-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            if (inputEl) inputEl.focus();
+        }, 100);
+    }
+
+    // Play audio infinitely with a slight delay to ensure previous audio is cancelled properly
+    setTimeout(() => {
+        playAudio(penaltyTargetText, 1.0, Infinity);
+    }, 300);
+};
+
+window.checkPenaltyInput = function(event) {
+    const inputEl = document.getElementById('penalty-input');
+    if (!inputEl) return;
+    const userVal = inputEl.value;
+    
+    if (sanitize(userVal) === sanitize(penaltyTargetText)) {
+        // Correct!
+        penaltyCount++;
+        updatePenaltyDots();
+        
+        inputEl.classList.remove('penalty-shake');
+        inputEl.classList.add('penalty-flash');
+        setTimeout(() => inputEl.classList.remove('penalty-flash'), 400);
+        
+        inputEl.value = '';
+        
+        if (penaltyCount >= PENALTY_MAX) {
+            setTimeout(() => {
+                closePenaltyModal();
+            }, 500);
+        }
+    }
+};
+
+document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('penalty-modal');
+    if (modal && modal.style.display === 'flex' && e.key === 'Enter') {
+        const inputEl = document.getElementById('penalty-input');
+        if (inputEl && document.activeElement === inputEl) {
+            if (sanitize(inputEl.value) !== sanitize(penaltyTargetText)) {
+                inputEl.classList.remove('penalty-flash');
+                inputEl.classList.add('penalty-shake');
+                setTimeout(() => inputEl.classList.remove('penalty-shake'), 300);
+            }
+        }
+    }
+});
+
+window.closePenaltyModal = function() {
+    const modal = document.getElementById('penalty-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (typeof stopAnyAudio === 'function') {
+        stopAnyAudio();
+    }
+};
+
+function updatePenaltyDots() {
+    const dotsEl = document.getElementById('penalty-progress-dots');
+    if (!dotsEl) return;
+    
+    let dots = '';
+    for (let i = 0; i < PENALTY_MAX; i++) {
+        dots += (i < penaltyCount) ? '●' : '○';
+    }
+    
+    dotsEl.textContent = dots;
+    
+    if (penaltyCount === PENALTY_MAX) {
+        dotsEl.style.color = 'var(--success)';
+    } else {
+        dotsEl.style.color = 'var(--border)';
+    }
+
+    const targetEl = document.getElementById('penalty-target-text');
+    const unmaskCheck = document.getElementById('penalty-unmask-check');
+    const isUnmasked = unmaskCheck && unmaskCheck.checked;
+
+    if (targetEl) {
+        if (penaltyCount >= 3 && penaltyCount < PENALTY_MAX && !isUnmasked) {
+            targetEl.textContent = penaltyTargetText.replace(/[a-zA-Z0-9]/g, '*');
+        } else {
+            targetEl.textContent = penaltyTargetText;
+        }
+    }
 }

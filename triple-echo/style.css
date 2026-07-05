@@ -658,3 +658,22 @@ button.is-playing {
     .result-card { padding: 18px; }
     .start-over-btn { font-size: 1rem; padding: 14px 36px; }
 }
+
+/* ペナルティモード用アニメーション */
+@keyframes flash-success {
+    0% { background-color: #fff; }
+    50% { background-color: #a7f3d0; }
+    100% { background-color: #fff; }
+}
+.penalty-flash {
+    animation: flash-success 0.4s ease-out;
+}
+@keyframes shake-error {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+.penalty-shake {
+    animation: shake-error 0.3s ease-out;
+    border-color: var(--danger) !important;
+}
