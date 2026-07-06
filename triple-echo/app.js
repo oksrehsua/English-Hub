@@ -1081,6 +1081,30 @@ document.addEventListener('keydown', function (event) {
             }
         }
     }
+
+    // Altキー + 方向キーのショートカット
+    if (event.altKey) {
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            const nextBtn = document.getElementById('next-btn');
+            if (nextBtn && nextBtn.style.display !== 'none') {
+                nextQuestion();
+            }
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            const reviewBtn = document.querySelector('button[onclick="openPenaltyModal()"]');
+            if (reviewBtn) {
+                openPenaltyModal();
+            }
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (typeof currentQuestions !== 'undefined' && currentQuestions[currentIndex]) {
+                const q = currentQuestions[currentIndex];
+                const englishText = getEnglishText(q);
+                playAudio(englishText);
+            }
+        }
+    }
 });
 
 function playCountdown(callback) {
