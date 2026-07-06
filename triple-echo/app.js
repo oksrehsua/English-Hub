@@ -771,7 +771,7 @@ function getPlayButtonsHtml(text) {
     const escapedText = text.replace(/'/g, "\\'");
     return `
         <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-            <button onclick="playAudio('${escapedText}', 1.0, Infinity, this)" class="play-audio-btn">1.0x</button>
+            <button onclick="playAudio('${escapedText}', 1.0, Infinity, this)" class="play-audio-btn" style="line-height: 1.2;">1.0x<br><span style="font-size: 0.75em; font-weight: normal;">(Alt + ↓)</span></button>
             <button onclick="playAudio('${escapedText}', 0.75, Infinity, this)" class="play-audio-btn">0.75x</button>
             <button onclick="playAudio('${escapedText}', 0.5, Infinity, this)" class="play-audio-btn">0.5x</button>
             <button onclick="playAudio('${escapedText}', 0.25, Infinity, this)" class="play-audio-btn">0.25x</button>
@@ -951,7 +951,7 @@ function checkAnswer() {
 
     let reviewBtnHtml = '';
     if (!isCorrect) {
-        reviewBtnHtml = `<button onclick="openPenaltyModal()" class="play-audio-btn" style="background: var(--primary); color: #fff; border: none;">復習</button>`;
+        reviewBtnHtml = `<button onclick="openPenaltyModal()" class="play-audio-btn" style="background: var(--primary); color: #fff; border: none; line-height: 1.2;">復習<br><span style="font-size: 0.75em; font-weight: normal;">(Alt + ↑)</span></button>`;
     }
 
     expArea.innerHTML = `<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"><strong style="font-size: 1.1em; color: #e95c8b;">解説:</strong>${reviewBtnHtml}</div><div style="margin-bottom: 10px; font-weight: 700;">${q.explanation || q.exp || '解説はありません。'}</div>${playBtnsHtml}`;
