@@ -1086,8 +1086,11 @@ document.addEventListener('keydown', function (event) {
     if (event.altKey) {
         if (event.key === 'ArrowRight') {
             event.preventDefault();
+            const checkBtn = document.getElementById('check-btn');
             const nextBtn = document.getElementById('next-btn');
-            if (nextBtn && nextBtn.style.display !== 'none') {
+            if (checkBtn && checkBtn.style.display !== 'none') {
+                checkAnswer();
+            } else if (nextBtn && nextBtn.style.display !== 'none') {
                 nextQuestion();
             }
         } else if (event.key === 'ArrowUp') {
