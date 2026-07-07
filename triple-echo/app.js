@@ -1512,9 +1512,10 @@ async function idbClearProgress() {
  */
 function updateProgress(itemId, isCorrect) {
     if (!itemId) return;
-    ProgressManager.update(itemId, isCorrect, 'triple-echo');
+    const appName = isReviewMode ? 'triple-echo-review' : 'triple-echo';
+    ProgressManager.update(itemId, isCorrect, appName);
     localStorage.setItem('TripleEchoLastPlayed', new Date().toISOString());
-    if (typeof logHubActivity === 'function') logHubActivity('triple-echo');
+    if (typeof logHubActivity === 'function') logHubActivity(appName);
 }
 
 function buildProgressCSV() {
@@ -2014,9 +2015,62 @@ function showDashboard() {
     } else {
         lastDateEl.textContent = '直近の学習: 記録なし';
     }
+
+    // 復習セッション統計を更新
+    updateReviewStats();
     
     // Default view
     switchDashboardView('mastery');
+}
+
+/** ダッシュボードの「復習セッション」統計エリアを更新する */
+function updateReviewStats() {
+    const statsEl = document.getElementById('review-session-stats');
+    if (!statsEl) return;
+
+    const pData = ProgressManager.getData();
+    const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+
+    let totalReviewAnswers = 0;   // 復習モードで解いた累計解答数
+    let todayReviewAnswers = 0;   // 今日の復習解答数
+    let totalNormalAnswers = 0;   // 通常モード累計
+    let todayNormalAnswers = 0;   // 通常モード今日
+
+    for (const itemId in pData) {
+        const p = pData[itemId];
+        const appName = p.appName || '';
+        const isReview = appName === 'triple-echo-review';
+        const dailyLog = p.dailyLog || {};
+
+        const todayCount = dailyLog[today] || 0;
+
+        if (isReview) {
+            // dailyLog の全日の合計を累計に
+            const allDayTotal = Object.values(dailyLog).reduce((s, v) => s + v, 0);
+            totalReviewAnswers += allDayTotal;
+            todayReviewAnswers += todayCount;
+        } else {
+            const allDayTotal = Object.values(dailyLog).reduce((s, v) => s + v, 0);
+            totalNormalAnswers += allDayTotal;
+            todayNormalAnswers += todayCount;
+        }
+    }
+
+    const todayStr = new Date().toLocaleDateString('ja-JP');
+    statsEl.innerHTML = `
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px;">
+            <div style="flex: 1; min-width: 140px; background: #1a2035; border: 1px solid #3b82f6; border-radius: 10px; padding: 14px 16px;">
+                <div style="font-size: 0.75rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">📚 通常モード (累計)</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1;">${totalNormalAnswers}<span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-left: 4px;">問</span></div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;">今日: <strong style="color: #60a5fa;">${todayNormalAnswers}問</strong></div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: #1a1f35; border: 1px solid #e95c8b; border-radius: 10px; padding: 14px 16px;">
+                <div style="font-size: 0.75rem; color: #f472b6; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">🔁 復習モード (累計)</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1;">${totalReviewAnswers}<span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-left: 4px;">問</span></div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;">今日: <strong style="color: #f472b6;">${todayReviewAnswers}問</strong></div>
+            </div>
+        </div>
+    `;
 }
 
 // ── 徹底復習（ペナルティ）モード ────────────────────────────
