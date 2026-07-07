@@ -56,12 +56,28 @@ function syncActivityLogFromProgress() {
         if (item.dailyLog && typeof item.dailyLog === 'object' && Object.keys(item.dailyLog).length > 0) {
             // dailyLog がある場合はそこから正確な日別カウントを取得
             for (const dateStr in item.dailyLog) {
-                const count = item.dailyLog[dateStr];
-                if (!count || count <= 0) continue;
-                if (!progressActivityLog[dateStr]) progressActivityLog[dateStr] = {};
-                if (!progressActivityLog[dateStr][appName]) progressActivityLog[dateStr][appName] = 0;
-                progressActivityLog[dateStr][appName] += count;
-                updated = true;
+                const entry = item.dailyLog[dateStr];
+                if (!entry) continue;
+
+                if (typeof entry === 'object') {
+                    // 新しいオブジェクト形式の場合
+                    for (const app in entry) {
+                        const count = entry[app];
+                        if (count <= 0) continue;
+                        if (!progressActivityLog[dateStr]) progressActivityLog[dateStr] = {};
+                        if (!progressActivityLog[dateStr][app]) progressActivityLog[dateStr][app] = 0;
+                        progressActivityLog[dateStr][app] += count;
+                        updated = true;
+                    }
+                } else {
+                    // 既存の数値形式の場合
+                    const count = entry;
+                    if (count <= 0) continue;
+                    if (!progressActivityLog[dateStr]) progressActivityLog[dateStr] = {};
+                    if (!progressActivityLog[dateStr][appName]) progressActivityLog[dateStr][appName] = 0;
+                    progressActivityLog[dateStr][appName] += count;
+                    updated = true;
+                }
             }
         } else if (item.lastUpdated) {
             // dailyLog がない（旧データ）場合は lastUpdated にフォールバック

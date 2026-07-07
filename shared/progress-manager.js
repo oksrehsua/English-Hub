@@ -165,7 +165,7 @@ window.ProgressManager = (function() {
         },
 
         // 進捗の更新
-        update(itemId, isCorrect, appName = '') {
+        update(itemId, isCorrect, appName = '', countOnly = false) {
             if (!itemId) return;
             if (!progressData[itemId]) {
                 progressData[itemId] = { totalCount: 0, correctCount: 0, streak: 0, history: [], appName: '', dailyLog: {} };
@@ -174,22 +174,37 @@ window.ProgressManager = (function() {
             if (appName) {
                 p.appName = appName;
             }
-            p.totalCount++;
-            if (isCorrect) {
-                p.correctCount++;
-                p.streak = p.streak > 0 ? p.streak + 1 : 1;
-            } else {
-                p.streak = p.streak < 0 ? p.streak - 1 : -1;
+            
+            if (!countOnly) {
+                p.totalCount++;
+                if (isCorrect) {
+                    p.correctCount++;
+                    p.streak = p.streak > 0 ? p.streak + 1 : 1;
+                } else {
+                    p.streak = p.streak < 0 ? p.streak - 1 : -1;
+                }
+                p.history.push(isCorrect ? 'o' : 'x');
+                if (p.history.length > 20) p.history = p.history.slice(-20);
             }
-            p.history.push(isCorrect ? 'o' : 'x');
-            if (p.history.length > 20) p.history = p.history.slice(-20);
             
             p.lastUpdated = new Date().toISOString();
 
             // 日別解答数を記録（カレンダー用）
             const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
             if (!p.dailyLog) p.dailyLog = {};
-            p.dailyLog[today] = (p.dailyLog[today] || 0) + 1;
+            
+            const mode = appName || 'triple-echo';
+            if (typeof p.dailyLog[today] === 'object' && p.dailyLog[today] !== null) {
+                p.dailyLog[today][mode] = (p.dailyLog[today][mode] || 0) + 1;
+            } else if (typeof p.dailyLog[today] === 'number') {
+                const prevVal = p.dailyLog[today];
+                p.dailyLog[today] = {};
+                p.dailyLog[today][p.appName || 'triple-echo'] = prevVal;
+                p.dailyLog[today][mode] = (p.dailyLog[today][mode] || 0) + 1;
+            } else {
+                p.dailyLog[today] = {};
+                p.dailyLog[today][mode] = 1;
+            }
             
             this.scheduledSave();
         },
@@ -197,9 +212,63 @@ window.ProgressManager = (function() {
         // 外部からデータを一括上書き/マージする用
         mergeData(newData) {
             if (!newData || typeof newData !== 'object') return;
-            // 既存データとマージするか、全上書きするか。今回は単純にオブジェクトをマージ
             for (const key in newData) {
-                progressData[key] = newData[key];
+                const current = progressData[key];
+                const incoming = newData[key];
+                if (!current) {
+                    progressData[key] = incoming;
+                    continue;
+                }
+                
+                // 更新日時（lastUpdated）が新しい方を優先してマージする
+                const currTime = current.lastUpdated ? new Date(current.lastUpdated).getTime() : 0;
+                const incTime = incoming.lastUpdated ? new Date(incoming.lastUpdated).getTime() : 0;
+                
+                if (incTime >= currTime) {
+                    // 読み込んだデータ（CSVなど）の方が新しい、または同等の場合
+                    const mergedDailyLog = { ...(current.dailyLog || {}) };
+                    const incDailyLog = incoming.dailyLog || {};
+                    for (const date in incDailyLog) {
+                        const currVal = mergedDailyLog[date];
+                        const incVal = incDailyLog[date];
+                        if (typeof currVal === 'object' && typeof incVal === 'object') {
+                            mergedDailyLog[date] = { ...currVal };
+                            for (const mode in incVal) {
+                                mergedDailyLog[date][mode] = Math.max(mergedDailyLog[date][mode] || 0, incVal[mode]);
+                            }
+                        } else if (typeof currVal === 'number' && typeof incVal === 'number') {
+                            mergedDailyLog[date] = Math.max(currVal, incVal);
+                        } else {
+                            mergedDailyLog[date] = incVal;
+                        }
+                    }
+                    progressData[key] = {
+                        ...incoming,
+                        dailyLog: mergedDailyLog
+                    };
+                } else {
+                    // ローカル（IndexedDB）側の方が新しい場合は、CSV側のデータで上書きせずローカルを優先
+                    const mergedDailyLog = { ...(incoming.dailyLog || {}) };
+                    const currDailyLog = current.dailyLog || {};
+                    for (const date in currDailyLog) {
+                        const currVal = currDailyLog[date];
+                        const incVal = mergedDailyLog[date];
+                        if (typeof currVal === 'object' && typeof incVal === 'object') {
+                            mergedDailyLog[date] = { ...incVal };
+                            for (const mode in currVal) {
+                                mergedDailyLog[date][mode] = Math.max(mergedDailyLog[date][mode] || 0, currVal[mode]);
+                            }
+                        } else if (typeof currVal === 'number' && typeof incVal === 'number') {
+                            mergedDailyLog[date] = Math.max(currVal, incVal);
+                        } else {
+                            mergedDailyLog[date] = currVal;
+                        }
+                    }
+                    progressData[key] = {
+                        ...current,
+                        dailyLog: mergedDailyLog
+                    };
+                }
             }
             this.saveData(); // 即時保存
         },

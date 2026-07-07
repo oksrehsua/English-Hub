@@ -2038,25 +2038,41 @@ function updateReviewStats() {
 
     for (const itemId in pData) {
         const p = pData[itemId];
-        const appName = p.appName || '';
-        const isReview = appName === 'triple-echo-review';
         const dailyLog = p.dailyLog || {};
 
-        const todayCount = dailyLog[today] || 0;
+        for (const dateStr in dailyLog) {
+            const entry = dailyLog[dateStr];
+            if (!entry) continue;
 
-        if (isReview) {
-            // dailyLog の全日の合計を累計に
-            const allDayTotal = Object.values(dailyLog).reduce((s, v) => s + v, 0);
-            totalReviewAnswers += allDayTotal;
-            todayReviewAnswers += todayCount;
-        } else {
-            const allDayTotal = Object.values(dailyLog).reduce((s, v) => s + v, 0);
-            totalNormalAnswers += allDayTotal;
-            todayNormalAnswers += todayCount;
+            const isToday = dateStr === today;
+
+            if (typeof entry === 'object') {
+                // 新しいオブジェクト形式の場合
+                for (const mode in entry) {
+                    const count = entry[mode];
+                    if (mode === 'triple-echo-review') {
+                        totalReviewAnswers += count;
+                        if (isToday) todayReviewAnswers += count;
+                    } else {
+                        totalNormalAnswers += count;
+                        if (isToday) todayNormalAnswers += count;
+                    }
+                }
+            } else {
+                // 旧形式（単一数値）の場合
+                const count = entry;
+                const mode = p.appName || '';
+                if (mode === 'triple-echo-review') {
+                    totalReviewAnswers += count;
+                    if (isToday) todayReviewAnswers += count;
+                } else {
+                    totalNormalAnswers += count;
+                    if (isToday) todayNormalAnswers += count;
+                }
+            }
         }
     }
 
-    const todayStr = new Date().toLocaleDateString('ja-JP');
     statsEl.innerHTML = `
         <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px;">
             <div style="flex: 1; min-width: 140px; background: #1a2035; border: 1px solid #3b82f6; border-radius: 10px; padding: 14px 16px;">
@@ -2118,6 +2134,16 @@ window.checkPenaltyInput = function(event) {
         // Correct!
         penaltyCount++;
         updatePenaltyDots();
+        
+        // 徹底復習（ペナルティ）でのタイピング正解を復習カウントに反映（countOnly=trueでstreak等を変更しない）
+        const q = currentQuestions[currentIndex];
+        if (q && q.id) {
+            ProgressManager.update(q.id, true, 'triple-echo-review', true);
+            // 進捗をファイルに自動保存
+            if (ProgressManager.getFileHandle()) {
+                saveProgressToFile(null, true).catch(() => {});
+            }
+        }
         
         inputEl.classList.remove('penalty-shake');
         inputEl.classList.add('penalty-flash');
