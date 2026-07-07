@@ -9,6 +9,11 @@ let isDictationMode = false;
 let loadedFileName = '';
 let activePlayback = { type: null, rate: null, btn: null, timeoutId: null, currentCount: 0, text: '', autoNext: false, onRepeat: null };
 
+function safeSetLocal(key, val) {
+    try { localStorage.setItem(key, val); }
+    catch (e) { console.warn('localStorage error (quota exceeded?):', e); }
+}
+
 // ── 進捗トラッキング ────────────────────────────
 // ※ ProgressManager を通じて EnglishHubProgress から読み書きします
 
@@ -61,15 +66,6 @@ const appAreaOriginalHTML = `
 `;
 
 window.addEventListener('DOMContentLoaded', () => {
-    const savedMistakes = localStorage.getItem('english_quiz_mistakes');
-    if (savedMistakes) {
-        mistakes = JSON.parse(savedMistakes);
-        if (mistakes.length > 0) {
-            document.getElementById('review-area').style.display = 'block';
-            document.getElementById('review-btn').textContent = `間違えた問題に再挑戦する (${mistakes.length}問)`;
-        }
-    }
-
     // 進捗データを IndexedDB から自動読み込み
     idbLoadProgress();
 
@@ -177,6 +173,7 @@ async function handleFileSelect(files) {
         loadedFileName = csvFiles.length === 1 ? csvFiles[0].name : `選択フォルダ (${csvFiles.length} 個のCSV)`;
         updateFilters();
         updateDashboardButtonVisibility();
+        refreshMistakes();
     } else {
         alert('有効な問題データが見つかりませんでした。CSVの形式を確認してください。');
     }
@@ -294,6 +291,31 @@ function updateFilters() {
     updateAvailableQuestionsCount();
 }
 
+function refreshMistakes() {
+    mistakes = [];
+    const pData = ProgressManager.getData();
+    if (pData && allQuestions.length > 0) {
+        allQuestions.forEach(q => {
+            const p = pData[q.id];
+            // 復習の条件: 学習済み(totalCount > 0) かつ 定着していない(streak <= 0)
+            if (p && p.totalCount > 0 && p.streak <= 0) {
+                mistakes.push(q);
+            }
+        });
+    }
+
+    const reviewArea = document.getElementById('review-area');
+    const reviewBtn = document.getElementById('review-btn');
+    if (reviewArea && reviewBtn) {
+        if (mistakes.length > 0) {
+            reviewArea.style.display = 'block';
+            reviewBtn.textContent = `復習モード (${mistakes.length}問)`;
+        } else {
+            reviewArea.style.display = 'none';
+        }
+    }
+}
+
 function startReviewMode() {
     initGlobalAudio();
     if (mistakes.length === 0) return;
@@ -310,11 +332,7 @@ function startReviewMode() {
 }
 
 function resetMistakes() {
-    if (confirm('間違えた問題の記録をすべて削除しますか？')) {
-        mistakes = [];
-        localStorage.removeItem('english_quiz_mistakes');
-        document.getElementById('review-area').style.display = 'none';
-    }
+    alert('復習リストは進捗データから自動生成されるため、個別の削除は不要になりました。\n間違えた問題を正解すると自動的にリストから消えます。');
 }
 
 function resetToSetup(force) {
@@ -339,13 +357,7 @@ function resetToSetup(force) {
     const reviewArea = document.getElementById('review-area');
     const reviewBtn = document.getElementById('review-btn');
 
-    if (mistakes.length > 0) {
-        reviewArea.style.display = 'block';
-        reviewBtn.textContent = `間違えた問題に再挑戦する (${mistakes.length}問)`
-    } else {
-        reviewArea.style.display = 'none';
-    }
-
+    refreshMistakes();
 }
 
 
@@ -927,7 +939,6 @@ function checkAnswer() {
         correctCount++;
         resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>
             <div class="result-sentence">正解: ${answerSentenceHtml}</div>`;
-        mistakes = mistakes.filter(m => m.id !== q.id);
         updateProgress(q.id, true);
     } else {
         const userDiffHtml = getSentenceDiffHtml(userAnswer, acceptedAnswers[0]);
@@ -939,11 +950,9 @@ function checkAnswer() {
             </div>
             <div class="result-sentence">正解: ${answerSentenceHtml}</div>
         `;
-        if (!mistakes.some(m => m.id === q.id)) mistakes.push(q);
         updateProgress(q.id, false);
     }
 
-    localStorage.setItem('english_quiz_mistakes', JSON.stringify(mistakes));
     document.getElementById('next-btn').style.display = 'inline-block';
 
     const escapedText = englishText.replace(/'/g, "\\'");
@@ -1007,14 +1016,11 @@ function nextQuestion() {
     if (q.format === '日本語訳') {
         const laterCheck = document.getElementById('later-check');
         if (laterCheck && laterCheck.checked) {
-            if (!mistakes.some(m => m.id === q.id)) mistakes.push(q);
             updateProgress(q.id, false);
         } else {
             correctCount++;
-            mistakes = mistakes.filter(m => m.id !== q.id);
             updateProgress(q.id, true);
         }
-        localStorage.setItem('english_quiz_mistakes', JSON.stringify(mistakes));
     }
 
     currentIndex++;
@@ -1030,12 +1036,15 @@ function nextQuestion() {
         const progressCount = Object.keys(pData).length;
         let exportMsg = '';
         if (progressCount > 0) {
+            const hasHandle = !!ProgressManager.getFileHandle();
             // 非同期で保存（完了画面の描画をブロックしない）
-            saveProgressToFile(null, true).catch(() => {});
+            trySaveProgress();
+            const savedLabel = hasHandle ? `進捗データ（${progressCount}問分）を保存しました` : `進捗データ（${progressCount}問分）`;
+            const btnLabel = hasHandle ? 'もう一度保存' : '保存する';
             exportMsg = `
                 <div class="progress-export-msg">
-                    進捗データ（${progressCount}問分）を保存しました
-                    <button onclick="redownloadProgressCSV()" class="secondary-btn" style="margin-top: 8px; font-size: 0.85rem; padding: 6px 14px;">もう一度保存</button>
+                    ${savedLabel}
+                    <button onclick="redownloadProgressCSV()" class="secondary-btn" style="margin-top: 8px; font-size: 0.85rem; padding: 6px 14px;">${btnLabel}</button>
                 </div>`;
         }
 
@@ -1486,7 +1495,7 @@ function initVoiceList() {
 
     // 選択変更時に保存
     voiceSelect.onchange = () => {
-        localStorage.setItem('selected_us_voice', voiceSelect.value);
+        safeSetLocal('selected_us_voice', voiceSelect.value);
     };
 }
 
@@ -1500,7 +1509,10 @@ window.addEventListener('load', () => {
 // ── 進捗トラッキング機能 (ProgressManager利用) ──────────────────────────
 
 async function idbLoadProgress() {
-    await ProgressManager.initProgress('progress-loaded-indicator', () => updateDashboardButtonVisibility());
+    await ProgressManager.initProgress('progress-loaded-indicator', () => {
+        updateDashboardButtonVisibility();
+        refreshMistakes();
+    });
 }
 
 async function idbClearProgress() {
@@ -1514,8 +1526,16 @@ function updateProgress(itemId, isCorrect) {
     if (!itemId) return;
     const appName = isReviewMode ? 'triple-echo-review' : 'triple-echo';
     ProgressManager.update(itemId, isCorrect, appName);
-    localStorage.setItem('TripleEchoLastPlayed', new Date().toISOString());
     if (typeof logHubActivity === 'function') logHubActivity(appName);
+
+    refreshMistakes();
+}
+
+/** 進捗CSVの保存を安全に実行する共通ヘルパー（ファイルハンドルがあるときのみ） */
+async function trySaveProgress() {
+    if (ProgressManager.getFileHandle()) {
+        await saveProgressToFile(null, true).catch(() => {});
+    }
 }
 
 function buildProgressCSV() {
@@ -1543,7 +1563,10 @@ async function exportProgressCSVManual() {
 
 /** 進捗CSVファイルを読み込む（共通処理） */
 async function loadProgressFromFile() {
-    await ProgressManager.loadProgressFromFile('progress-loaded-indicator', () => updateDashboardButtonVisibility());
+    await ProgressManager.loadProgressFromFile('progress-loaded-indicator', () => {
+        updateDashboardButtonVisibility();
+        refreshMistakes();
+    });
 }
 
 function loadProgressCSV(file) {
@@ -1558,6 +1581,7 @@ function loadProgressCSV(file) {
                 indicator.style.display = 'block';
             }
             updateDashboardButtonVisibility();
+            refreshMistakes();
         } catch (err) {
             console.error('進捗CSV読み込みエラー:', err);
             alert('進捗CSVの読み込みに失敗しました。');
@@ -1717,9 +1741,7 @@ async function suspendQuiz() {
     SuspendManager.showSaveToast();
 
     // 中断時にも進捗CSVを上書き保存する（ハンドルがある場合のみ、サイレント保存）
-    if (ProgressManager.getFileHandle()) {
-        saveProgressToFile(null, true).catch(() => {});
-    }
+    trySaveProgress();
 
     // force=true で確認なしでTOP画面に戻る
     resetToSetup(true);
@@ -1782,6 +1804,7 @@ async function resumeQuiz() {
         appArea.innerHTML = appAreaOriginalHTML;
         appArea.style.display = 'block';
 
+        refreshMistakes();
         displayQuestion();
     } catch (e) {
         console.error('中断データの復元に失敗しました:', e);
@@ -2008,9 +2031,17 @@ function showDashboard() {
     
     // 直近の学習日を表示
     const lastDateEl = document.getElementById('last-learning-date');
-    const lastPlayedStr = localStorage.getItem('TripleEchoLastPlayed');
-    if (lastPlayedStr) {
-        const d = new Date(lastPlayedStr);
+    const pData = ProgressManager.getData();
+    let maxTime = 0;
+    for (const key in pData) {
+        if (pData[key].lastUpdated) {
+            const t = new Date(pData[key].lastUpdated).getTime();
+            if (t > maxTime) maxTime = t;
+        }
+    }
+
+    if (maxTime > 0) {
+        const d = new Date(maxTime);
         lastDateEl.textContent = '直近の学習: ' + d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour12: false });
     } else {
         lastDateEl.textContent = '直近の学習: 記録なし';
@@ -2023,52 +2054,24 @@ function showDashboard() {
     switchDashboardView('mastery');
 }
 
-/** ダッシュボードの「復習セッション」統計エリアを更新する */
+/** ダッシュボードの統計エリアを更新する（CSVから算出） */
 function updateReviewStats() {
     const statsEl = document.getElementById('review-session-stats');
     if (!statsEl) return;
 
+    const today = new Date().toLocaleDateString('sv-SE');
     const pData = ProgressManager.getData();
-    const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
 
-    let totalReviewAnswers = 0;   // 復習モードで解いた累計解答数
-    let todayReviewAnswers = 0;   // 今日の復習解答数
-    let totalNormalAnswers = 0;   // 通常モード累計
-    let todayNormalAnswers = 0;   // 通常モード今日
+    let totalAnswers = 0;
+    let todayAnswers = 0;
 
-    for (const itemId in pData) {
-        const p = pData[itemId];
-        const dailyLog = p.dailyLog || {};
-
-        for (const dateStr in dailyLog) {
-            const entry = dailyLog[dateStr];
-            if (!entry) continue;
-
-            const isToday = dateStr === today;
-
-            if (typeof entry === 'object') {
-                // 新しいオブジェクト形式の場合
-                for (const mode in entry) {
-                    const count = entry[mode];
-                    if (mode === 'triple-echo-review') {
-                        totalReviewAnswers += count;
-                        if (isToday) todayReviewAnswers += count;
-                    } else {
-                        totalNormalAnswers += count;
-                        if (isToday) todayNormalAnswers += count;
-                    }
-                }
-            } else {
-                // 旧形式（単一数値）の場合
-                const count = entry;
-                const mode = p.appName || '';
-                if (mode === 'triple-echo-review') {
-                    totalReviewAnswers += count;
-                    if (isToday) todayReviewAnswers += count;
-                } else {
-                    totalNormalAnswers += count;
-                    if (isToday) todayNormalAnswers += count;
-                }
+    for (const key in pData) {
+        const p = pData[key];
+        if (p.dailyLog) {
+            for (const d in p.dailyLog) {
+                const count = typeof p.dailyLog[d] === 'number' ? p.dailyLog[d] : 0;
+                totalAnswers += count;
+                if (d === today) todayAnswers += count;
             }
         }
     }
@@ -2076,14 +2079,12 @@ function updateReviewStats() {
     statsEl.innerHTML = `
         <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px;">
             <div style="flex: 1; min-width: 140px; background: #1a2035; border: 1px solid #3b82f6; border-radius: 10px; padding: 14px 16px;">
-                <div style="font-size: 0.75rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">📚 通常モード (累計)</div>
-                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1;">${totalNormalAnswers}<span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-left: 4px;">問</span></div>
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;">今日: <strong style="color: #60a5fa;">${todayNormalAnswers}問</strong></div>
+                <div style="font-size: 0.75rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">📚 累計解答数</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1;">${totalAnswers}<span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-left: 4px;">問</span></div>
             </div>
             <div style="flex: 1; min-width: 140px; background: #1a1f35; border: 1px solid #e95c8b; border-radius: 10px; padding: 14px 16px;">
-                <div style="font-size: 0.75rem; color: #f472b6; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">🔁 復習モード (累計)</div>
-                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1;">${totalReviewAnswers}<span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-left: 4px;">問</span></div>
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px;">今日: <strong style="color: #f472b6;">${todayReviewAnswers}問</strong></div>
+                <div style="font-size: 0.75rem; color: #f472b6; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">🔥 今日の解答数</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1;">${todayAnswers}<span style="font-size: 0.9rem; font-weight: 600; color: #94a3b8; margin-left: 4px;">問</span></div>
             </div>
         </div>
     `;
@@ -2134,16 +2135,6 @@ window.checkPenaltyInput = function(event) {
         // Correct!
         penaltyCount++;
         updatePenaltyDots();
-        
-        // 徹底復習（ペナルティ）でのタイピング正解を復習カウントに反映（countOnly=trueでstreak等を変更しない）
-        const q = currentQuestions[currentIndex];
-        if (q && q.id) {
-            ProgressManager.update(q.id, true, 'triple-echo-review', true);
-            // 進捗をファイルに自動保存
-            if (ProgressManager.getFileHandle()) {
-                saveProgressToFile(null, true).catch(() => {});
-            }
-        }
         
         inputEl.classList.remove('penalty-shake');
         inputEl.classList.add('penalty-flash');
