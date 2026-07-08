@@ -8,7 +8,6 @@ let isListeningMode = false;
 let isDictationMode = false;
 let loadedFileName = '';
 let activePlayback = { type: null, rate: null, btn: null, timeoutId: null, currentCount: 0, text: '', autoNext: false, onRepeat: null };
-let currentIsCorrect = false;
 
 function safeSetLocal(key, val) {
     try { localStorage.setItem(key, val); }
@@ -902,65 +901,70 @@ function checkAnswer() {
     let isCorrect = false;
     if (isDictationMode) {
         isCorrect = (cleanUser === sanitize(englishText));
-    } else if (q.format !== '日本語訳') {
-        isCorrect = acceptedAnswers.includes(cleanUser);
     } else {
-        isCorrect = true; // 日本語訳は自己採点のためデフォルト正解扱い
+        isCorrect = acceptedAnswers.includes(cleanUser);
     }
 
-    currentIsCorrect = isCorrect;
     const answerSentenceHtml = getAnswerSentenceHtml(q);
     const resultMsg = document.getElementById('result-message');
     const expArea = document.getElementById('explanation-area');
 
     if (q.format === '日本語訳' && !isDictationMode) {
         resultMsg.innerHTML = `<div class="result-sentence">正解: <span class="highlight-answer">${q.answer}</span></div>`;
-    } else {
-        if (isCorrect) {
-            resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>
-                <div class="result-sentence">正解: ${answerSentenceHtml}</div>`;
-        } else {
-            const userDiffHtml = getSentenceDiffHtml(userAnswer, acceptedAnswers[0]);
-            resultMsg.innerHTML = `
-                <div class="result-incorrect">❌ 不正解</div>
-                <div class="result-sentence" style="background: #fff; margin-bottom: 8px; border-style: dashed;">
-                    <div class="your-answer-label">あなたの解答:</div>
-                    ${userDiffHtml || '<span style="color: #999;">(未入力)</span>'}
-                </div>
-                <div class="result-sentence">正解: ${answerSentenceHtml}</div>
-            `;
+
+        const escapedText = englishText.replace(/'/g, "\\'");
+        const playBtnsHtml = getPlayButtonsHtml(englishText);
+
+        const reviewCheckHtml = `
+            <div style="margin-top: 20px; padding: 16px; background: #fffceb; border: 2px solid #000; border-radius: 16px; display: flex; align-items: center; gap: 12px; box-shadow: 4px 4px 0 #000;">
+                <input type="checkbox" id="later-check" style="width: 24px; height: 24px; cursor: pointer; accent-color: #e95c8b;">
+                <label for="later-check" style="cursor: pointer; font-weight: 900; color: #1a1a1a;">後で確認する（チェックを入れると不正解扱い）</label>
+            </div>
+        `;
+
+        const reviewBtnHtml = `<button onclick="openPenaltyModal()" class="play-audio-btn" style="background: var(--primary); color: #fff; border: none; line-height: 1.2;">徹底復習<br><span style="font-size: 0.75em; font-weight: normal;">(Alt + ↑)</span></button>`;
+
+        expArea.innerHTML = `<div style="display: flex; align-items: center; gap: 10px;"><strong style="font-size: 1.1em; color: #e95c8b;">解説:</strong>${reviewBtnHtml}</div><div style="margin-top: 10px; margin-bottom: 10px; font-weight: 700;">${q.explanation || q.exp || '解説はありません。'}</div>${playBtnsHtml}${reviewCheckHtml}`;
+        expArea.style.display = 'block';
+        document.getElementById('check-btn').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'inline-block';
+
+        const autoPlayEnabled = document.getElementById('auto-play-toggle')?.checked ?? true;
+        if (autoPlayEnabled) {
+            playAudio(englishText);
         }
+        return;
     }
+
+    if (isCorrect) {
+        correctCount++;
+        resultMsg.innerHTML = `<div class="result-correct">⭕ 正解！</div>
+            <div class="result-sentence">正解: ${answerSentenceHtml}</div>`;
+        updateProgress(q.id, true);
+    } else {
+        const userDiffHtml = getSentenceDiffHtml(userAnswer, acceptedAnswers[0]);
+        resultMsg.innerHTML = `
+            <div class="result-incorrect">❌ 不正解</div>
+            <div class="result-sentence" style="background: #fff; margin-bottom: 8px; border-style: dashed;">
+                <div class="your-answer-label">あなたの解答:</div>
+                ${userDiffHtml || '<span style="color: #999;">(未入力)</span>'}
+            </div>
+            <div class="result-sentence">正解: ${answerSentenceHtml}</div>
+        `;
+        updateProgress(q.id, false);
+    }
+
+    document.getElementById('next-btn').style.display = 'inline-block';
 
     const escapedText = englishText.replace(/'/g, "\\'");
     const playBtnsHtml = getPlayButtonsHtml(englishText);
 
-    let reviewBtnHtml = '';
-    if (!isCorrect && q.format !== '日本語訳') {
-        reviewBtnHtml = `<button onclick="openPenaltyModal()" class="play-audio-btn" style="background: var(--primary); color: #fff; border: none; line-height: 1.2;">徹底復習<br><span style="font-size: 0.75em; font-weight: normal;">(Alt + ↑)</span></button>`;
-    }
+    // 正解・不正解にかかわらず常に「徹底復習」ボタンを表示する
+    const reviewBtnHtml = `<button onclick="openPenaltyModal()" class="play-audio-btn" style="background: var(--primary); color: #fff; border: none; line-height: 1.2;">徹底復習<br><span style="font-size: 0.75em; font-weight: normal;">(Alt + ↑)</span></button>`;
 
-    const reviewCheckHtml = `
-        <div style="margin-top: 15px; padding: 12px 16px; background: #fffceb; border: 2px solid #000; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 2px 2px 0 #000; width: 100%; box-sizing: border-box;">
-            <input type="checkbox" id="later-check" ${!isCorrect ? 'checked disabled' : ''} style="width: 22px; height: 22px; cursor: pointer; accent-color: #e95c8b; flex-shrink: 0;">
-            <label for="later-check" style="cursor: pointer; font-weight: 700; color: #1a1a1a; font-size: 0.95em;">
-                ${!isCorrect ? '不正解のため復習リストに追加されます' : '正解したけど自信がないので、復習リストに追加する'}
-            </label>
-        </div>
-    `;
-
-    expArea.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-            <strong style="font-size: 1.1em; color: #e95c8b;">解説:</strong>${reviewBtnHtml}
-        </div>
-        <div style="margin-bottom: 10px; font-weight: 700;">${q.explanation || q.exp || '解説はありません。'}</div>
-        ${playBtnsHtml}
-        ${reviewCheckHtml}
-    `;
-    
+    expArea.innerHTML = `<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;"><strong style="font-size: 1.1em; color: #e95c8b;">解説:</strong>${reviewBtnHtml}</div><div style="margin-bottom: 10px; font-weight: 700;">${q.explanation || q.exp || '解説はありません。'}</div>${playBtnsHtml}`;
     expArea.style.display = 'block';
     document.getElementById('check-btn').style.display = 'none';
-    document.getElementById('next-btn').style.display = 'inline-block';
 
     const autoPlayEnabled = document.getElementById('auto-play-toggle')?.checked ?? true;
     if (autoPlayEnabled) {
@@ -1009,19 +1013,14 @@ function nextQuestion() {
     initGlobalAudio();
     const q = currentQuestions[currentIndex];
     
-    const laterCheck = document.getElementById('later-check');
-    const wantsReview = laterCheck && laterCheck.checked;
-
-    if (currentIsCorrect) {
-        correctCount++; // セッションとしての正解数は増やす
-        if (wantsReview) {
-            // 正解したが復習したい場合、進捗データ上は不正解扱いにして定着度をリセットする
+    if (q.format === '日本語訳') {
+        const laterCheck = document.getElementById('later-check');
+        if (laterCheck && laterCheck.checked) {
             updateProgress(q.id, false);
         } else {
+            correctCount++;
             updateProgress(q.id, true);
         }
-    } else {
-        updateProgress(q.id, false);
     }
 
     currentIndex++;
