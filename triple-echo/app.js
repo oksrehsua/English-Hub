@@ -38,12 +38,18 @@ function initGlobalAudio() {
 }
 
 const appAreaOriginalHTML = `
-    <div id="progress"></div>
-    <div class="badge-container" style="margin-bottom: 4px;">
-        <span id="item-id-badge" class="badge item-id-badge"></span>
-        <span id="format-badge" class="badge format-badge"></span>
-        <span id="level-badge" class="badge level-badge"></span>
-        <span id="unit-category-badge" class="badge unit-category-badge" style="display: none;"></span>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <div id="progress" style="margin-bottom: 10px; color: #666;"></div>
+            <span id="item-id-badge" class="badge item-id-badge"></span>
+            <span id="format-badge" class="badge format-badge"></span>
+            <span id="level-badge" class="badge level-badge"></span>
+            <span id="unit-category-badge" class="badge unit-category-badge" style="display: none;"></span>
+        </div>
+        <button id="note-open-btn" onclick="openNoteModal()" class="secondary-btn note-btn" style="padding: 6px 12px; font-size: 0.85rem; margin-top: 0; display: flex; align-items: center; gap: 4px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            Note
+        </button>
     </div>
     <div id="progress-badge-area" class="badge-container" style="margin-bottom: 12px; min-height: 24px;"></div>
     <h3 id="question-text"></h3>
@@ -593,6 +599,8 @@ function displayQuestion() {
     if (progressBadgeArea) {
         progressBadgeArea.innerHTML = getProgressBadgeHtml(q.id);
     }
+    
+    updateNoteButtonUI(q.id);
 
     document.getElementById('result-message').textContent = '';
     document.getElementById('explanation-area').style.display = 'none';
@@ -1077,6 +1085,7 @@ function nextQuestion() {
 document.addEventListener('keydown', function (event) {
     if (event.key === 'Enter') {
         if (document.activeElement.tagName === 'BUTTON') return;
+        if (document.activeElement.tagName === 'TEXTAREA') return;
 
         const appArea = document.getElementById('app-area');
         if (appArea && appArea.style.display !== 'none') {
@@ -1523,6 +1532,166 @@ window.addEventListener('load', () => {
 });
 
 // ── 進捗トラッキング機能 (ProgressManager利用) ──────────────────────────
+
+// --- Note Feature Implementation ---
+const NoteManager = (function() {
+    let fileHandle = null;
+    let noteData = {}; // { [item_id]: "note content" }
+
+    return {
+        isFileSelected() {
+            return !!fileHandle;
+        },
+
+        async promptForFile() {
+            if (!window.showSaveFilePicker || !window.showOpenFilePicker) {
+                alert('お使いのブラウザはファイル選択に対応していません。');
+                return false;
+            }
+            
+            const useExisting = confirm("既存のNoteファイルを開きますか？\n\n【OK】既存のファイルを選択する\n【キャンセル】新しくNoteファイルを作成する");
+
+            try {
+                let handle;
+                if (useExisting) {
+                    [handle] = await window.showOpenFilePicker({
+                        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+                        multiple: false
+                    });
+                } else {
+                    handle = await window.showSaveFilePicker({
+                        suggestedName: 'triple-echo-notes.json',
+                        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+                    });
+                }
+                
+                fileHandle = handle;
+                const file = await handle.getFile();
+                const text = await file.text();
+                if (text) {
+                    noteData = JSON.parse(text);
+                } else {
+                    noteData = {};
+                }
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('Note load error:', err);
+                    alert('Noteファイルの読み込みに失敗しました。');
+                }
+                return false;
+            }
+        },
+
+        async trySaveToFile() {
+            if (!fileHandle) return false;
+            try {
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(noteData, null, 2));
+                await writable.close();
+                return true;
+            } catch (err) {
+                console.error('Note auto-save error:', err);
+                return false;
+            }
+        },
+
+        getNote(itemId) {
+            return noteData[itemId] || '';
+        },
+
+        async setNote(itemId, text) {
+            if (!text || !text.trim()) {
+                delete noteData[itemId];
+            } else {
+                noteData[itemId] = text.trim();
+            }
+            return await this.trySaveToFile();
+        },
+
+        hasNote(itemId) {
+            return !!noteData[itemId];
+        }
+    };
+})();
+
+async function openNoteModal() {
+    if (typeof currentQuestions === 'undefined' || !currentQuestions[currentIndex]) return;
+    const q = currentQuestions[currentIndex];
+
+    // ファイルが選択されていない場合はプロンプトを出す
+    if (!NoteManager.isFileSelected()) {
+        const success = await NoteManager.promptForFile();
+        if (!success) return; // ユーザーがキャンセルした場合は何もしない
+        updateNoteButtonUI(q.id); // 読み込んだ内容でボタンUIを更新
+    }
+
+    const modal = document.getElementById('note-modal');
+    const textarea = document.getElementById('note-modal-textarea');
+    const idSpan = document.getElementById('note-modal-id');
+    
+    idSpan.textContent = q.id;
+    textarea.value = NoteManager.getNote(q.id);
+    modal.style.display = 'flex';
+    setTimeout(() => textarea.focus(), 100);
+}
+
+function closeNoteModal() {
+    const modal = document.getElementById('note-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function saveNoteFromModal() {
+    if (typeof currentQuestions === 'undefined' || !currentQuestions[currentIndex]) return;
+    const q = currentQuestions[currentIndex];
+    const textarea = document.getElementById('note-modal-textarea');
+    
+    const savedToFile = await NoteManager.setNote(q.id, textarea.value);
+    closeNoteModal();
+    updateNoteButtonUI(q.id);
+    showNoteSaveStatus(savedToFile);
+}
+
+function showNoteSaveStatus(isFile) {
+    let statusEl = document.getElementById('note-save-toast');
+    if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'note-save-toast';
+        statusEl.style.cssText = [
+            'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+            'background:#d1fae5', 'color:#065f46', 'font-weight:700',
+            'padding:12px 24px', 'border-radius:12px',
+            'border: 2px solid #34d399',
+            'box-shadow:0 4px 16px rgba(0,0,0,.15)',
+            'font-size:0.95rem', 'z-index:9999',
+            'transition:opacity .4s ease',
+            'pointer-events:none'
+        ].join(';');
+        document.body.appendChild(statusEl);
+    }
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
+    statusEl.textContent = isFile ? `ファイルに保存しました (${timeStr})` : `ブラウザに保存しました (${timeStr})`;
+    statusEl.style.opacity = '1';
+    clearTimeout(statusEl._hideTimer);
+    statusEl._hideTimer = setTimeout(() => { statusEl.style.opacity = '0'; }, 3000);
+}
+
+function updateNoteButtonUI(itemId) {
+    const btn = document.getElementById('note-open-btn');
+    if (!btn) return;
+    if (NoteManager.hasNote(itemId)) {
+        btn.classList.add('has-note');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary)"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg><span style="color: var(--primary); font-weight: 800;">Note (あり)</span>`;
+        btn.style.borderColor = 'var(--primary)';
+        btn.style.background = '#fff4f4';
+    } else {
+        btn.classList.remove('has-note');
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg> <span style="color: var(--text);">Note</span>`;
+        btn.style.borderColor = 'var(--border)';
+        btn.style.background = 'var(--white)';
+    }
+}
 
 async function idbLoadProgress() {
     await ProgressManager.initProgress('progress-loaded-indicator', () => {

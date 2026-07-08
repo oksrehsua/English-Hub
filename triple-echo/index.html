@@ -77,6 +77,8 @@
             </div>
         </div>
 
+
+
         <div id="loading-status" style="display: none; margin-top: 10px; font-weight: 900; color: var(--primary);">
         </div>
 
@@ -187,11 +189,19 @@
     </div>
 
     <div id="app-area" class="container" style="display: none;">
-        <div id="progress" style="margin-bottom: 10px; color: #666;"></div>
-        <span id="item-id-badge" class="badge item-id-badge"></span>
-        <span id="format-badge" class="badge format-badge"></span>
-        <span id="level-badge" class="badge level-badge"></span>
-        <span id="unit-category-badge" class="badge unit-category-badge" style="display: none;"></span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <div id="progress" style="margin-bottom: 10px; color: #666;"></div>
+                <span id="item-id-badge" class="badge item-id-badge"></span>
+                <span id="format-badge" class="badge format-badge"></span>
+                <span id="level-badge" class="badge level-badge"></span>
+                <span id="unit-category-badge" class="badge unit-category-badge" style="display: none;"></span>
+            </div>
+            <button id="note-open-btn" onclick="openNoteModal()" class="secondary-btn note-btn" style="padding: 6px 12px; font-size: 0.85rem; margin-top: 0; display: flex; align-items: center; gap: 4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                Note
+            </button>
+        </div>
 
         <h3 id="question-text" style="margin-top: 10px;"></h3>
         <div id="input-area"></div>
@@ -296,6 +306,25 @@
             
             <div style="text-align: center;">
                 <button onclick="closePenaltyModal()" class="secondary-btn" style="padding: 10px 32px; font-size: 1rem;">やめる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note モーダル -->
+    <div id="note-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2500; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #fff; border-radius: 12px; border: 3px solid #000; padding: 24px; max-width: 600px; width: 100%; position: relative; box-shadow: 8px 8px 0 #000; display: flex; flex-direction: column;">
+            <button onclick="closeNoteModal()" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #666; padding: 0; margin: 0; line-height: 1;">&times;</button>
+            
+            <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 1.3rem; color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                Note (<span id="note-modal-id" style="color: var(--primary);"></span>)
+            </h2>
+            
+            <textarea id="note-modal-textarea" placeholder="メモを入力..." style="width: 100%; min-height: 200px; padding: 16px; font-size: 1rem; border: 2px solid var(--border); border-radius: 8px; resize: vertical; outline: none; margin-bottom: 20px; font-family: inherit; line-height: 1.6;"></textarea>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="closeNoteModal()" class="secondary-btn" style="padding: 10px 24px; font-size: 0.95rem;">キャンセル</button>
+                <button onclick="saveNoteFromModal()" style="padding: 10px 24px; font-size: 0.95rem; margin-top: 0;">保存する</button>
             </div>
         </div>
     </div>
