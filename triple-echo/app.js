@@ -142,6 +142,7 @@ async function handleFileSelect(files) {
                     for (let i = 1; i < rows.length; i++) {
                         const r = rows[i];
                         if (r.length < 7) continue;
+                        if ((r[3] || '').trim() === '書き換え') continue;
                         allQuestions.push({
                             id: r[0],
                             category: r[1] || '',
@@ -741,7 +742,7 @@ function getEnglishText(q) {
     }
 
     let englishText = '';
-    const usePlainAnswerDisplay = ['和文英訳', '誤文訂正', '書き換え', 'Q&A作成'].includes(q.format);
+    const usePlainAnswerDisplay = ['和文英訳', '誤文訂正', 'Q&A作成'].includes(q.format);
 
     if (usePlainAnswerDisplay) {
         englishText = answerForText;
@@ -771,7 +772,7 @@ function getAnswerSentenceHtml(q) {
     }
 
     let answerSentenceHtml = '';
-    const usePlainAnswerDisplay = ['和文英訳', '誤文訂正', '書き換え', 'Q&A作成'].includes(q.format);
+    const usePlainAnswerDisplay = ['和文英訳', '誤文訂正', 'Q&A作成'].includes(q.format);
 
     if (usePlainAnswerDisplay) {
         answerSentenceHtml = `<span class="highlight-answer">${q.answer}</span>`;
