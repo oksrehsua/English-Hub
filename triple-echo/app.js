@@ -339,7 +339,29 @@ function startReviewMode() {
 }
 
 function resetMistakes() {
-    alert('復習リストは進捗データから自動生成されるため、個別の削除は不要になりました。\n間違えた問題を正解すると自動的にリストから消えます。');
+    if (mistakes.length === 0) {
+        alert('リセットする間違い記録がありません。');
+        return;
+    }
+    if (!confirm(`間違えた ${mistakes.length} 問の学習記録をリセットしますか？\n（対象問題の正解率・ストリークがクリアされます）`)) return;
+
+    const pData = ProgressManager.getData();
+    mistakes.forEach(q => {
+        if (pData[q.id]) {
+            const p = pData[q.id];
+            p.archivedTotalCount = (p.archivedTotalCount || 0) + (p.totalCount || 0);
+            p.archivedCorrectCount = (p.archivedCorrectCount || 0) + (p.correctCount || 0);
+            p.totalCount = 0;
+            p.correctCount = 0;
+            p.streak = 0;
+            p.history = [];
+        }
+    });
+
+    ProgressManager.saveData().then(() => {
+        refreshMistakes();
+        alert('リセットしました。');
+    });
 }
 
 function resetToSetup(force) {
